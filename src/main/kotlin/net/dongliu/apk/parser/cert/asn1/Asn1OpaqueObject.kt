@@ -20,18 +20,11 @@ import java.nio.ByteBuffer
 /**
  * Opaque holder of encoded ASN.1 stuff.
  */
-class Asn1OpaqueObject {
-    val encoded: ByteBuffer
-
-    constructor(encoded: ByteBuffer) {
-        this.encoded = encoded.slice()
+class Asn1OpaqueObject (
+    var encoded: ByteBuffer
+) {
+    init {
+        encoded = encoded.slice()
     }
-
-    constructor(encoded: ByteArray) {
-        this.encoded = ByteBuffer.wrap(encoded)
-    }
-
-    fun getEncoded(): ByteBuffer {
-        return encoded.slice()
-    }
+    constructor(encoded: ByteArray) :this(ByteBuffer.wrap(encoded))
 }

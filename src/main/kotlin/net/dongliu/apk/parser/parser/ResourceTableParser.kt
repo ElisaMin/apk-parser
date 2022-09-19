@@ -4,8 +4,9 @@ import net.dongliu.apk.parser.exception.ParserException
 import net.dongliu.apk.parser.struct.*
 import net.dongliu.apk.parser.struct.resource.*
 import net.dongliu.apk.parser.utils.Buffers
-import net.dongliu.apk.parser.utils.Pair
 import net.dongliu.apk.parser.utils.ParseUtils
+import net.dongliu.apk.parser.utils.left
+import net.dongliu.apk.parser.utils.right
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
@@ -53,8 +54,8 @@ class ResourceTableParser(buffer: ByteBuffer) {
             var packageHeader = readChunkHeader() as PackageHeader
             for (i in 0 until packageCount) {
                 val pair = readPackage(packageHeader)
-                resourceTable!!.addPackage(pair.left!!)
-                packageHeader = pair.right!!
+                resourceTable!!.addPackage(pair.first)
+                packageHeader = pair.second
             }
         }
     }
@@ -63,10 +64,10 @@ class ResourceTableParser(buffer: ByteBuffer) {
      * read one package
      */
     private fun readPackage(packageHeader: PackageHeader): Pair<ResourcePackage, PackageHeader> {
-        val pair = Pair<ResourcePackage, PackageHeader>()
+        var pair = Pair<ResourcePackage?, PackageHeader?>(null,null)
         //read packageHeader
         val resourcePackage = ResourcePackage(packageHeader)
-        pair.left = resourcePackage
+        pair = pair.copy(first = resourcePackage)
         val beginPos = buffer.position().toLong()
         // read type string pool
         if (packageHeader.typeStrings > 0) {
@@ -129,7 +130,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
 
                 ChunkType.TABLE_PACKAGE -> {
                     // another package. we should read next package here
-                    pair.right = (chunkHeader as PackageHeader)
+                    pair = pair.copy(second = chunkHeader as PackageHeader)
                     break@outer
                 }
 
@@ -152,7 +153,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
                 else -> throw ParserException("unexpected chunk type: 0x" + chunkHeader.chunkType.toInt())
             }
         }
-        return pair
+        return Pair(pair.first!!,pair.second!!)
     }
 
     private fun readChunkHeader(): ChunkHeader {

@@ -50,13 +50,6 @@ class ResourcePackage(header: PackageHeader) {
         return typesMap[id]
     }
 
-    fun setTypeStringPool(typeStringPool: StringPool) {
-        this.typeStringPool = typeStringPool
-    }
-
-    fun setKeyStringPool(keyStringPool: StringPool) {
-        this.keyStringPool = keyStringPool
-    }
 
     fun getTypeSpecMap(): Map<Short, TypeSpec> {
         return typeSpecMap

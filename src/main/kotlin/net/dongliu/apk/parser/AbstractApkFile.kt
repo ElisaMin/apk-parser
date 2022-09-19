@@ -226,9 +226,6 @@ abstract class AbstractApkFile : Closeable {
      */
     @Throws(IOException::class)
     fun getDexClasses(): Array<DexClass?> {
-        if (dexClasses == null) {
-            parseDexFiles()
-        }
         return dexClasses
     }
 

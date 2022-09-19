@@ -19,7 +19,7 @@ import java.security.cert.X509Certificate
  *
  * @author dongliu
  */
-internal class JSSECertificateParser(data: ByteArray) : CertificateParser(data) {
+class JSSECertificateParser(data: ByteArray) : CertificateParser(data) {
     @Throws(CertificateException::class)
     override fun parse(): List<CertificateMeta> {
         val contentInfo: ContentInfo

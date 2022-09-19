@@ -17,7 +17,7 @@ import java.security.cert.X509Certificate
  *
  * @author dongliu
  */
-internal class BCCertificateParser(data: ByteArray) : CertificateParser(data) {
+class BCCertificateParser(data: ByteArray) : CertificateParser(data) {
     /**
      * get certificate info
      */

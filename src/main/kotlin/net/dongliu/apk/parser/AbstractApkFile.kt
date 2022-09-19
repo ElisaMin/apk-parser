@@ -34,7 +34,7 @@ abstract class AbstractApkFile : Closeable {
     val apkMeta get() = apkTranslator.apkMeta
     val iconPaths: List<IconPath?>
         get() = apkTranslator.iconPaths
-    val apkSigners by lazy {
+    val apkSingers by lazy {
         ArrayList<ApkSigner>().apply {
             for (file in allCertificateData) {
                 val certificateMetas = CertificateParser
@@ -294,7 +294,7 @@ abstract class AbstractApkFile : Closeable {
     abstract fun verifyApk(): ApkSignStatus
     @Throws(IOException::class)
     override fun close() {
-        apkSigners.clear()
+        apkSingers.clear()
         resourceTable = null
     }
 

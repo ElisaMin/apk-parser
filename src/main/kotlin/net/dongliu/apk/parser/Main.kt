@@ -20,7 +20,7 @@ object Main {
             when (action) {
                 "meta" -> println(apkFile.apkMeta)
                 "manifest" -> println(apkFile.manifestXml)
-                "signer" -> println(apkFile.apkSigners)
+                "signer" -> println(apkFile.apkSingers)
                 else -> {}
             }
         }

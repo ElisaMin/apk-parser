@@ -56,7 +56,7 @@ abstract class AbstractApkFile : Closeable {
                 field = value
 
                 manifestParsed = false
-            } else this
+            }
         }
 
 //
@@ -184,7 +184,7 @@ abstract class AbstractApkFile : Closeable {
         get() {
             parseManifest()
             val iconPaths = iconPaths
-            if (iconPaths!!.isEmpty()) {
+            if (iconPaths.isEmpty()) {
                 return emptyList()
             }
             val iconFaces: MutableList<IconFace> = ArrayList(iconPaths.size)
@@ -318,7 +318,7 @@ abstract class AbstractApkFile : Closeable {
         var eocd: EOCD? = null
         for (i in len - 22 downTo 0.coerceAtLeast(len - maxEOCDSize) + 1) {
             val v = buffer.getInt(i)
-            if (v == EOCD.Companion.SIGNATURE) {
+            if (v == EOCD.SIGNATURE) {
                 Buffers.position(buffer, i + 4)
                 eocd = EOCD()
                 eocd.setDiskNum(Buffers.readUShort(buffer))
@@ -338,7 +338,7 @@ abstract class AbstractApkFile : Closeable {
         // find apk sign block
         Buffers.position(buffer, cdStart - magicStrLen)
         val magic = Buffers.readAsciiString(buffer, magicStrLen)
-        if (magic != ApkSigningBlock.Companion.MAGIC) {
+        if (magic != ApkSigningBlock.MAGIC) {
             return null
         }
         Buffers.position(buffer, cdStart - 24)

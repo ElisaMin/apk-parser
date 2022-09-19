@@ -18,8 +18,8 @@ import java.util.zip.ZipInputStream
  */
 class ByteArrayApkFile(private var apkData: ByteArray?) : AbstractApkFile(), Closeable {
     @get:Throws(IOException::class)
-    protected override val allCertificateData: List<CertificateFile>
-        protected get() {
+    override val allCertificateData: List<CertificateFile>
+        get() {
             val list: MutableList<CertificateFile> = ArrayList()
             ByteArrayInputStream(apkData).use { `in` ->
                 ZipInputStream(`in`).use { zis ->

@@ -26,11 +26,11 @@ class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
         zf = ZipFile(apkFile)
     }
 
-    constructor(filePath: String) : this(File(filePath)) {}
+    constructor(filePath: String) : this(File(filePath))
 
     @get:Throws(IOException::class)
-    protected override val allCertificateData: List<CertificateFile>
-        protected get() {
+    override val allCertificateData: List<CertificateFile>
+        get() {
             val enu = zf.entries()
             val list: MutableList<CertificateFile> = ArrayList()
             while (enu.hasMoreElements()) {
@@ -66,7 +66,7 @@ class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
     @Deprecated("using google official ApkVerifier of apksig lib instead.")
     @Throws(IOException::class)
     override fun verifyApk(): ApkSignStatus {
-        val entry = zf.getEntry("META-INF/MANIFEST.MF")
+        zf.getEntry("META-INF/MANIFEST.MF")
             ?: // apk is not signed;
             return ApkSignStatus.NotSigned
         JarFile(apkFile).use { jarFile ->
@@ -94,6 +94,6 @@ class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
 
     @Throws(IOException::class)
     override fun close() {
-        Closeable { super@ApkFile.close() }.use { superClosable -> }
+        Closeable { super@ApkFile.close() }.use { }
     }
 }

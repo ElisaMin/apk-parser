@@ -15,7 +15,6 @@
  */
 package net.dongliu.apk.parser.cert.asn1.ber
 
-import net.dongliu.apk.parser.cert.asn1.ber.BerDataValueFormatException
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -70,6 +69,7 @@ class InputStreamBerDataValueReader(`in`: InputStream?) : BerDataValueReader {
             return len
         }
 
+        @Suppress("NAME_SHADOWING")
         @Throws(IOException::class)
         override fun read(b: ByteArray, off: Int, len: Int): Int {
             var len = len
@@ -222,6 +222,7 @@ class InputStreamBerDataValueReader(`in`: InputStream?) : BerDataValueReader {
             return result
         }
 
+        @Suppress("NAME_SHADOWING")
         @Throws(IOException::class, BerDataValueFormatException::class)
         private fun skipDefiniteLengthContents(`in`: InputStream, len: Int) {
             var len = len

@@ -15,7 +15,7 @@ import java.util.*
 class ApkMetaTranslator(private val resourceTable: ResourceTable, private val locale: Locale?) : XmlStreamer {
     private val tagStack = arrayOfNulls<String>(100)
     private var depth = 0
-    private val apkMetaBuilder: ApkMeta.Builder = ApkMeta.Companion.newBuilder()
+    private val apkMetaBuilder: ApkMeta.Builder = ApkMeta.newBuilder()
     var iconPaths = emptyList<IconPath>()
         private set
 
@@ -55,11 +55,11 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                     if (resourceValue is ReferenceResourceValue) {
                         val resourceId = resourceValue.referenceResourceId
                         val resources = resourceTable.getResourcesById(resourceId)
-                        if (!resources.isEmpty()) {
+                        if (resources.isNotEmpty()) {
                             val icons: MutableList<IconPath> = ArrayList()
                             var hasDefault = false
                             for (resource in resources) {
-                                val type = resource!!.type
+                                val type = resource.type
                                 val resourceEntry = resource.resourceEntry
                                 val path = resourceEntry.toStringValue(resourceTable, locale)
                                 if (type.density == Densities.DEFAULT) {

@@ -15,8 +15,6 @@
  */
 package net.dongliu.apk.parser.cert.asn1
 
-import net.dongliu.apk.parser.cert.asn1.Asn1DecodingException
-import net.dongliu.apk.parser.cert.asn1.Asn1OpaqueObject
 import net.dongliu.apk.parser.cert.asn1.ber.BerDataValue
 import net.dongliu.apk.parser.cert.asn1.ber.BerDataValueFormatException
 import net.dongliu.apk.parser.cert.asn1.ber.BerEncoding
@@ -27,7 +25,6 @@ import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util.*
-import java.util.function.ToIntFunction
 
 /**
  * Parser of ASN.1 BER-encoded structures.
@@ -37,6 +34,7 @@ import java.util.function.ToIntFunction
  * Structure is described to the parser by providing a class annotated with [Asn1Class],
  * containing fields annotated with [Asn1Field].
  */
+@Suppress("UNCHECKED_CAST")
 object Asn1BerParser {
     /**
      * Returns the ASN.1 structure contained in the BER encoded input.
@@ -279,8 +277,7 @@ object Asn1BerParser {
             if (dataValue == null) {
                 break
             }
-            val element: T
-            element = if (ByteBuffer::class.java == elementClass) {
+            val element: T = if (ByteBuffer::class.java == elementClass) {
                 dataValue.encodedContents as T
             } else if (Asn1OpaqueObject::class.java == elementClass) {
                 Asn1OpaqueObject(dataValue.encoded) as T
@@ -463,6 +460,7 @@ object Asn1BerParser {
             isOptional = annotation.optional
         }
 
+        @Suppress("NAME_SHADOWING")
         @Throws(Asn1DecodingException::class)
         fun setValueFrom(dataValue: BerDataValue, obj: Any) {
             var dataValue = dataValue

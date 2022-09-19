@@ -15,11 +15,8 @@
  */
 package net.dongliu.apk.parser.cert.asn1
 
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-
 @Target(AnnotationTarget.FIELD)
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class Asn1Field(
     /**
      * Index used to order fields in a container. Required for fields of SEQUENCE containers.

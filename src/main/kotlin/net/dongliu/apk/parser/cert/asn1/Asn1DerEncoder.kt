@@ -15,8 +15,6 @@
  */
 package net.dongliu.apk.parser.cert.asn1
 
-import net.dongliu.apk.parser.cert.asn1.Asn1EncodingException
-import net.dongliu.apk.parser.cert.asn1.Asn1OpaqueObject
 import net.dongliu.apk.parser.cert.asn1.ber.BerEncoding
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Field
@@ -24,7 +22,6 @@ import java.lang.reflect.Modifier
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util.*
-import java.util.function.ToIntFunction
 
 /**
  * Encoder of ASN.1 structures into DER-encoded form.
@@ -34,6 +31,7 @@ import java.util.function.ToIntFunction
  * Structure is described to the encoder by providing a class annotated with [Asn1Class],
  * containing fields annotated with [Asn1Field].
  */
+@Suppress("UNCHECKED_CAST")
 object Asn1DerEncoder {
     /**
      * Returns the DER-encoded form of the provided ASN.1 structure.
@@ -74,17 +72,15 @@ object Asn1DerEncoder {
         }
         var resultField: AnnotatedField? = null
         for (field in fields) {
-            val fieldValue = getMemberFieldValue(container, field.field)
-            if (fieldValue != null) {
-                if (resultField != null) {
-                    throw Asn1EncodingException(
-                        "Multiple non-null fields in CHOICE class " + containerClass.name
-                                + ": " + resultField.field.name
-                                + ", " + field.field.name
-                    )
-                }
-                resultField = field
+            getMemberFieldValue(container, field.field)
+            if (resultField != null) {
+                throw Asn1EncodingException(
+                    "Multiple non-null fields in CHOICE class " + containerClass.name
+                            + ": " + resultField.field.name
+                            + ", " + field.field.name
+                )
             }
+            resultField = field
         }
         if (resultField == null) {
             throw Asn1EncodingException(
@@ -99,7 +95,7 @@ object Asn1DerEncoder {
         val containerClass: Class<*> = container.javaClass
         val fields = getAnnotatedFields(container)
         Collections.sort(
-            fields, Comparator.comparingInt(ToIntFunction { f: AnnotatedField -> f.annotation.index })
+            fields, Comparator.comparingInt { f: AnnotatedField -> f.annotation.index }
         )
         if (fields.size > 1) {
             var lastField: AnnotatedField? = null
@@ -140,7 +136,7 @@ object Asn1DerEncoder {
     private fun toSetOf(values: Collection<Any>, elementType: Asn1Type?): ByteArray {
         val serializedValues: MutableList<ByteArray> = ArrayList(values.size)
         for (value in values) {
-            serializedValues.add(JavaToDerConverter.toDer(value, elementType, null)!!)
+            serializedValues.add(JavaToDerConverter.toDer(value, elementType, null))
         }
         if (serializedValues.size > 1) {
             Collections.sort(serializedValues, ByteArrayLexicographicComparator.INSTANCE)
@@ -401,9 +397,9 @@ object Asn1DerEncoder {
             val encoded = JavaToDerConverter.toDer(fieldValue, mDataType, mElementDataType)
             return when (mTagging) {
                 Asn1Tagging.Normal -> encoded
-                Asn1Tagging.Explicit -> createTag(mDerTagClass, true, mDerTagNumber, encoded!!)
+                Asn1Tagging.Explicit -> createTag(mDerTagClass, true, mDerTagNumber, encoded)
                 Asn1Tagging.Implicit -> {
-                    val originalTagNumber = BerEncoding.getTagNumber(encoded!![0])
+                    val originalTagNumber = BerEncoding.getTagNumber(encoded[0])
                     if (originalTagNumber == 0x1f) {
                         throw Asn1EncodingException("High-tag-number form not supported")
                     }
@@ -417,7 +413,6 @@ object Asn1DerEncoder {
                     encoded
                 }
 
-                else -> throw RuntimeException("Unknown tagging mode: $mTagging")
             }
         }
     }

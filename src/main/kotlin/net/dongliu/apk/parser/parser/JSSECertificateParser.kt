@@ -21,7 +21,7 @@ import java.security.cert.X509Certificate
  */
 internal class JSSECertificateParser(data: ByteArray) : CertificateParser(data) {
     @Throws(CertificateException::class)
-    override fun parse(): List<CertificateMeta?> {
+    override fun parse(): List<CertificateMeta> {
         val contentInfo: ContentInfo
         contentInfo = try {
             Asn1BerParser.parse(ByteBuffer.wrap(data), ContentInfo::class.java)

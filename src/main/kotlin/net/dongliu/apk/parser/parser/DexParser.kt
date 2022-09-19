@@ -58,15 +58,15 @@ class DexParser(buffer: ByteBuffer) {
         }
         val dexClasses = arrayOfNulls<DexClass>(dexClassStructs.size)
         for (i in dexClassStructs.indices) {
-            val dexClassStruct = dexClassStructs[i]
+            val dexClassStruct = dexClassStructs[i]?:continue
             var superClass: String? = null
-            if (dexClassStruct.getSuperclassIdx() != NO_INDEX) {
-                superClass = types[dexClassStruct.getSuperclassIdx()]
+            if (dexClassStruct.superclassIdx != NO_INDEX) {
+                superClass = types[dexClassStruct.superclassIdx]
             }
             dexClasses[i] = DexClass(
-                types[dexClassStruct.getClassIdx()],
+                types[dexClassStruct.classIdx],
                 superClass,
-                dexClassStruct.getAccessFlags()
+                dexClassStruct.accessFlags
             )
         }
         return dexClasses

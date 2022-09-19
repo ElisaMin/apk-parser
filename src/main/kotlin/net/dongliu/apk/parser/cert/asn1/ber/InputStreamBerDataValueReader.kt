@@ -134,22 +134,22 @@ class InputStreamBerDataValueReader(`in`: InputStream?) : BerDataValueReader {
                 if (firstLengthByte and 0x80 == 0) {
                     // short form length
                     contentsLength = readShortFormLength(firstLengthByte)
-                    contentsOffsetInDataValue = `in`.getReadByteCount()
+                    contentsOffsetInDataValue = `in`.readByteCount
                     skipDefiniteLengthContents(`in`, contentsLength)
                 } else if (firstLengthByte and 0xff != 0x80) {
                     // long form length
                     contentsLength = readLongFormLength(`in`, firstLengthByte)
-                    contentsOffsetInDataValue = `in`.getReadByteCount()
+                    contentsOffsetInDataValue = `in`.readByteCount
                     skipDefiniteLengthContents(`in`, contentsLength)
                 } else {
                     // indefinite length
-                    contentsOffsetInDataValue = `in`.getReadByteCount()
+                    contentsOffsetInDataValue = `in`.readByteCount
                     contentsLength =
                         if (constructed) skipConstructedIndefiniteLengthContents(`in`) else skipPrimitiveIndefiniteLengthContents(
                             `in`
                         )
                 }
-                val encoded: ByteArray = `in`.getReadBytes()
+                val encoded: ByteArray = `in`.readBytes
                 val encodedContents = ByteBuffer.wrap(encoded, contentsOffsetInDataValue, contentsLength)
                 BerDataValue(
                     ByteBuffer.wrap(encoded),
@@ -273,7 +273,7 @@ class InputStreamBerDataValueReader(`in`: InputStream?) : BerDataValueReader {
             // can contain data values which are indefinite length encoded as well. As a result, we
             // must parse the direct children of this data value to correctly skip over the contents of
             // this data value.
-            val readByteCountBefore: Int = `in`.getReadByteCount()
+            val readByteCountBefore: Int = `in`.readByteCount
             while (true) {
                 // We can't easily peek for the 0x00 0x00 terminator using the provided InputStream.
                 // Thus, we use the fact that 0x00 0x00 parses as a data value whose encoded form we
@@ -281,15 +281,15 @@ class InputStreamBerDataValueReader(`in`: InputStream?) : BerDataValueReader {
                 val dataValue = readDataValue(`in`)
                     ?: throw BerDataValueFormatException(
                         "Truncated indefinite-length contents: "
-                                + (`in`.getReadByteCount() - readByteCountBefore) + " bytes read"
+                                + (`in`.readByteCount - readByteCountBefore) + " bytes read"
                     )
-                if (`in`.getReadByteCount() <= 0) {
+                if (`in`.readByteCount <= 0) {
                     throw BerDataValueFormatException("Indefinite-length contents too long")
                 }
                 val encoded = dataValue.encoded
                 if (encoded!!.remaining() == 2 && encoded[0].toInt() == 0 && encoded[1].toInt() == 0) {
                     // 0x00 0x00 encountered
-                    return `in`.getReadByteCount() - readByteCountBefore - 2
+                    return `in`.readByteCount - readByteCountBefore - 2
                 }
             }
         }

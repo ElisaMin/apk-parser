@@ -18,7 +18,7 @@ class DexHeader {
      * public long checksum;
      * SHA-1 hash len = kSHA1DigestLen
      */
-    var signature: ByteArray
+    lateinit var signature: ByteArray
 
     /**
      * length of entire file. u4

@@ -15,10 +15,10 @@ object XmlEscaper {
     }
 
     val ESCAPE_XML10: CharSequenceTranslator = AggregateTranslator(
-        LookupTranslator(*EntityArrays.BASIC_ESCAPE()),
-        LookupTranslator(*EntityArrays.APOS_ESCAPE()),
-        LookupTranslator(
-            *arrayOf(
+        arrayOf(
+        LookupTranslator(EntityArrays.BASIC_ESCAPE() as Array<Array<out CharSequence>>),
+        LookupTranslator(EntityArrays.APOS_ESCAPE() as Array<Array<out CharSequence>>),
+        LookupTranslator(arrayOf(
                 arrayOf("\u0000", ""),
                 arrayOf("\u0001", ""),
                 arrayOf("\u0002", ""),
@@ -54,6 +54,6 @@ object XmlEscaper {
         ),
         NumericEntityEscaper.Companion.between(0x7f, 0x84),
         NumericEntityEscaper.Companion.between(0x86, 0x9f),
-        UnicodeUnpairedSurrogateRemover()
+        UnicodeUnpairedSurrogateRemover())
     )
 }

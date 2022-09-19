@@ -49,12 +49,12 @@ class ResourceTableParser(buffer: ByteBuffer) {
         this.stringPool = stringPool
         resourceTable = ResourceTable(stringPool)
         val packageCount = resourceTableHeader.packageCount
-        if (packageCount != 0L) {
+        if (packageCount != 0) {
             var packageHeader = readChunkHeader() as PackageHeader
             for (i in 0 until packageCount) {
                 val pair = readPackage(packageHeader)
-                resourceTable!!.addPackage(pair.left)
-                packageHeader = pair.right
+                resourceTable!!.addPackage(pair.left!!)
+                packageHeader = pair.right!!
             }
         }
     }
@@ -97,7 +97,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
                         i++
                     }
                     //id start from 1
-                    val typeSpecName = resourcePackage.typeStringPool[typeSpecHeader.id - 1]
+                    val typeSpecName = resourcePackage.typeStringPool?.get(typeSpecHeader.id - 1)
                     val typeSpec = TypeSpec(typeSpecHeader, entryFlags, typeSpecName)
                     resourcePackage.addTypeSpec(typeSpec)
                     Buffers.position(buffer, chunkBegin + typeSpecHeader.bodySize)
@@ -113,7 +113,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
                         i++
                     }
                     val type = Type(typeHeader)
-                    type.name = resourcePackage.typeStringPool[typeHeader.id - 1]
+                    type.name = resourcePackage.typeStringPool?.get(typeHeader.id - 1)
                     val entryPos = chunkBegin + typeHeader.entriesStart - typeHeader.headerSize.toInt()
                     Buffers.position(buffer, entryPos)
                     val b = buffer.slice()
@@ -163,7 +163,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
         return when (chunkType) {
             ChunkType.TABLE -> {
                 val resourceTableHeader = ResourceTableHeader(headerSize, chunkSize)
-                resourceTableHeader.packageCount = Buffers.readUInt(buffer)
+                resourceTableHeader.packageCount = Buffers.readUInt(buffer).toInt()
                 Buffers.position(buffer, begin + headerSize)
                 resourceTableHeader
             }
@@ -181,7 +181,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
 
             ChunkType.TABLE_PACKAGE -> {
                 val packageHeader = PackageHeader(headerSize, chunkSize.toLong())
-                packageHeader.id = Buffers.readUInt(buffer)
+                packageHeader.id = Buffers.readUInt(buffer).toInt()
                 packageHeader.name = ParseUtils.readStringUTF16(buffer, 128)
                 packageHeader.setTypeStrings(Buffers.readUInt(buffer))
                 packageHeader.setLastPublicType(Buffers.readUInt(buffer))
@@ -193,9 +193,9 @@ class ResourceTableParser(buffer: ByteBuffer) {
 
             ChunkType.TABLE_TYPE_SPEC -> {
                 val typeSpecHeader = TypeSpecHeader(headerSize, chunkSize.toLong())
-                typeSpecHeader.id = Buffers.readUByte(buffer)
-                typeSpecHeader.res0 = Buffers.readUByte(buffer)
-                typeSpecHeader.res1 = Buffers.readUShort(buffer)
+                typeSpecHeader.id = Buffers.readUByte(buffer).toByte()
+                typeSpecHeader.res0 = Buffers.readUByte(buffer).toByte()
+                typeSpecHeader.res1 = Buffers.readUShort(buffer).toShort()
                 typeSpecHeader.setEntryCount(Buffers.readUInt(buffer))
                 Buffers.position(buffer, begin + headerSize)
                 typeSpecHeader
@@ -203,9 +203,9 @@ class ResourceTableParser(buffer: ByteBuffer) {
 
             ChunkType.TABLE_TYPE -> {
                 val typeHeader = TypeHeader(headerSize, chunkSize.toLong())
-                typeHeader.id = Buffers.readUByte(buffer)
-                typeHeader.res0 = Buffers.readUByte(buffer)
-                typeHeader.res1 = Buffers.readUShort(buffer)
+                typeHeader.id = Buffers.readUByte(buffer).toByte()
+                typeHeader.res0 = Buffers.readUByte(buffer).toByte()
+                typeHeader.res1 = Buffers.readUShort(buffer).toShort()
                 typeHeader.setEntryCount(Buffers.readUInt(buffer))
                 typeHeader.setEntriesStart(Buffers.readUInt(buffer))
                 typeHeader.config = readResTableConfig()
@@ -251,9 +251,9 @@ class ResourceTableParser(buffer: ByteBuffer) {
         config.language = String(Buffers.readBytes(buffer, 2)).replace("\u0000", "")
         config.country = String(Buffers.readBytes(buffer, 2)).replace("\u0000", "")
         //screen type
-        config.orientation = Buffers.readUByte(buffer)
-        config.touchscreen = Buffers.readUByte(buffer)
-        config.density = Buffers.readUShort(buffer)
+        config.orientation = Buffers.readUByte(buffer).toByte()
+        config.touchscreen = Buffers.readUByte(buffer).toByte()
+        config.density = Buffers.readUShort(buffer).toShort()
         // now just skip the others...
         val endPos = buffer.position().toLong()
         Buffers.skip(buffer, (size - (endPos - beginPos)).toInt())

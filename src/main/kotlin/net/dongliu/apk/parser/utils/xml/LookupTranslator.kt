@@ -18,12 +18,13 @@ package net.dongliu.apk.parser.utils.xml
 
 import java.io.IOException
 import java.io.Writer
+import java.util.Arrays
 
 /**
  * Translates a value using a lookup table.
  */
-internal class LookupTranslator(vararg lookup: Array<CharSequence>) : CharSequenceTranslator() {
-    private val lookupMap: HashMap<String, CharSequence>
+internal class LookupTranslator(lookup: Array<Array<out CharSequence>>) : CharSequenceTranslator() {
+    private val lookupMap: HashMap<String, CharSequence> = HashMap()
     private val shortest: Int
     private val longest: Int
 
@@ -39,19 +40,16 @@ internal class LookupTranslator(vararg lookup: Array<CharSequence>) : CharSequen
      * @param lookup CharSequence[][] table of size [*][2]
      */
     init {
-        lookupMap = HashMap()
         var _shortest = Int.MAX_VALUE
         var _longest = 0
-        if (lookup != null) {
-            for (seq in lookup) {
-                lookupMap[seq[0].toString()] = seq[1]
-                val sz = seq[0].length
-                if (sz < _shortest) {
-                    _shortest = sz
-                }
-                if (sz > _longest) {
-                    _longest = sz
-                }
+        for (seq in lookup) {
+            lookupMap[seq[0].toString()] = seq[1]
+            val sz = seq[0].length
+            if (sz < _shortest) {
+                _shortest = sz
+            }
+            if (sz > _longest) {
+                _longest = sz
             }
         }
         shortest = _shortest

@@ -82,15 +82,14 @@ class ResourceFetcher {
         val begin = code.indexOf("R.style")
         val end = code.indexOf("}", begin)
         val styleCode = code.substring(begin, end)
-        val lines = styleCode.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        for (line in lines) {
-            line = line.trim { it <= ' ' }
+        styleCode.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.map {
+            val line = it.trim { it <= ' ' }
             if (line.startsWith("field public static final")) {
-                line = substringBefore(line, ";").replace("deprecated ", "")
+                substringBefore(line, ";").replace("deprecated ", "")
                     .substring("field public static final int ".length).replace("_", ".")
-                println(line)
-            }
-        }
+                    .also(::println)
+            } else line
+        }.toTypedArray()
     }
 
     @Throws(IOException::class)

@@ -21,7 +21,7 @@ import java.util.*
  */
 class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
     /**
-     * By default the data buffer Chunks is buffer little-endian byte order both at runtime and when stored buffer
+     * By default, the data buffer Chunks is buffer little-endian byte order both at runtime and when stored buffer
      * files.
      */
     private var stringPool: StringPool? = null
@@ -29,7 +29,7 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
     /**
      * some attribute name stored by resource id
      */
-    private var resourceMap: Array<String?>?
+    private var resourceMap: Array<String?> = emptyArray()
     private val buffer: ByteBuffer
     var xmlStreamer: XmlStreamer? = null
     private val resourceTable: ResourceTable
@@ -50,16 +50,16 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
             else -> {}
         }
         // read string pool chunk
-        val stringPoolChunkHeader = readChunkHeader() ?: return
+        val stringPoolChunkHeader: ChunkHeader = readChunkHeader() ?: return
         ParseUtils.checkChunkType(ChunkType.STRING_POOL, stringPoolChunkHeader.chunkType.toInt())
         stringPool = ParseUtils.readStringPool(buffer, stringPoolChunkHeader as StringPoolHeader)
         // read on chunk, check if it was an optional XMLResourceMap chunk
-        var chunkHeader = readChunkHeader() ?: return
-        if (chunkHeader.chunkType.toInt() == ChunkType.XML_RESOURCE_MAP) {
+        var chunkHeader: ChunkHeader? = readChunkHeader() ?: return
+        if (chunkHeader?.chunkType?.toInt() == ChunkType.XML_RESOURCE_MAP) {
             val resourceIds = readXmlResourceMap(chunkHeader as XmlResourceMapHeader)
             resourceMap = arrayOfNulls(resourceIds.size)
             for (i in resourceIds.indices) {
-                resourceMap!![i] = getString(resourceIds[i])
+                resourceMap[i] = getString(resourceIds[i])
             }
             chunkHeader = readChunkHeader()
         }
@@ -77,20 +77,10 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
                 }
 
                 ChunkType.XML_START_ELEMENT ->
-                    val  xmlNodeStartTag
-                    : XmlNodeStartTag
-                    ?
-                    = readXmlNodeStartTag()
+                    readXmlNodeStartTag()
                 ChunkType.XML_END_ELEMENT ->
-                    val  xmlNodeEndTag
-                    : XmlNodeEndTag
-                    ?
-                    = readXmlNodeEndTag()
-                ChunkType.XML_CDATA ->
-                    val  xmlCData
-                    : XmlCData
-                    ?
-                    = readXmlCData()
+                    readXmlNodeEndTag()
+                ChunkType.XML_CDATA -> readXmlCData()
                 else -> if (chunkHeader.chunkType.toInt() >= ChunkType.XML_FIRST_CHUNK &&
                     chunkHeader.chunkType.toInt() <= ChunkType.XML_LAST_CHUNK
                 ) {

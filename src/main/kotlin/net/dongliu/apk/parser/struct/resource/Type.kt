@@ -10,25 +10,27 @@ import java.util.*
  * @author dongliu
  */
 class Type(header: TypeHeader) {
+
+
+    init {
+        require(header.config != null )
+    }
+
     var name: String? = null
-    val id: Short
-    val locale: Locale
+    val id: Short = header.id.toShort()
+    val locale: Locale = header.config!!.run {
+        Locale(language, country)
+    }
     var keyStringPool: StringPool? = null
     var buffer: ByteBuffer? = null
-    private var offsets: LongArray
+    private var offsets: LongArray = LongArray(0)
     private var stringPool: StringPool? = null
 
     /**
      * see Densities.java for values
      */
-    val density: Int
+    val density: Int = header.config!!.density.toInt()
 
-    init {
-        id = header.id
-        val config = header.config
-        locale = Locale(config.language, config.country)
-        density = config.density
-    }
 
     fun getResourceEntry(id: Int): ResourceEntry? {
         if (id >= offsets.size) {
@@ -72,7 +74,7 @@ class Type(header: TypeHeader) {
     private fun readResourceTableMap(): ResourceTableMap {
         val resourceTableMap = ResourceTableMap()
         resourceTableMap.nameRef = Buffers.readUInt(buffer!!)
-        resourceTableMap.setResValue(ParseUtils.readResValue(buffer!!, stringPool))
+        resourceTableMap.resValue = ParseUtils.readResValue(buffer!!, stringPool)
         if (resourceTableMap.nameRef and 0x02000000L != 0L) {
             //read arrays
         } else if (resourceTableMap.nameRef and 0x01000000L != 0L) {

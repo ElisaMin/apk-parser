@@ -103,7 +103,7 @@ abstract class CharSequenceTranslator {
         val newArray = arrayOfNulls<CharSequenceTranslator>(translators.size + 1)
         newArray[0] = this
         System.arraycopy(translators, 0, newArray, 1, translators.size)
-        return AggregateTranslator(*newArray)
+        return AggregateTranslator(newArray.map { it!! }.toTypedArray())
     }
 
     companion object {

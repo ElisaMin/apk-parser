@@ -16,13 +16,11 @@ class ResourcePackage(header: PackageHeader) {
      * contains the names of the types of the Resources defined in the ResourcePackage
      */
     var typeStringPool: StringPool? = null
-        private set
 
     /**
      * contains the names (keys) of the Resources defined in the ResourcePackage.
      */
     var keyStringPool: StringPool? = null
-        private set
     private var typeSpecMap: MutableMap<Short, TypeSpec> = HashMap()
     private var typesMap: MutableMap<Short, MutableList<Type>> = HashMap()
 

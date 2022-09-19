@@ -1,7 +1,6 @@
 package net.dongliu.apk.parser.struct
 
 import net.dongliu.apk.parser.struct.resource.*
-import net.dongliu.apk.parser.struct.xml.Attributes.get
 import net.dongliu.apk.parser.utils.Locales
 import java.util.*
 

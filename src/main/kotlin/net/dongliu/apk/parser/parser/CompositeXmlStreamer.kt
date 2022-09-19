@@ -6,10 +6,13 @@ import net.dongliu.apk.parser.struct.xml.*
  * @author dongliu
  */
 class CompositeXmlStreamer(vararg xmlStreamers: XmlStreamer) : XmlStreamer {
+
+
+
     val xmlStreamers: Array<XmlStreamer>
 
     init {
-        this.xmlStreamers = xmlStreamers
+        this.xmlStreamers = xmlStreamers as Array<XmlStreamer>
     }
 
     override fun onStartTag(xmlNodeStartTag: XmlNodeStartTag) {

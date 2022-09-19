@@ -15,7 +15,7 @@ abstract class CertificateParser(protected val data: ByteArray) {
      * get certificate info
      */
     @Throws(CertificateException::class)
-    abstract fun parse(): List<CertificateMeta?>
+    abstract fun parse(): List<CertificateMeta>
 
     companion object {
         fun getInstance(data: ByteArray): CertificateParser {

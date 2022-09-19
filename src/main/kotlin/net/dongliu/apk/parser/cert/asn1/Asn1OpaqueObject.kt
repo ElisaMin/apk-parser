@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
  * Opaque holder of encoded ASN.1 stuff.
  */
 class Asn1OpaqueObject {
-    private val encoded: ByteBuffer
+    val encoded: ByteBuffer
 
     constructor(encoded: ByteBuffer) {
         this.encoded = encoded.slice()

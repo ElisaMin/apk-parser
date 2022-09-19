@@ -15,6 +15,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.cert.CertificateException
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Common Apk Parser methods.
@@ -23,77 +24,53 @@ import java.util.*
  * @author Liu Dong
  */
 abstract class AbstractApkFile : Closeable {
-    private var dexClasses: Array<DexClass?>
+    private var dexClasses: Array<DexClass?> = emptyArray()
     private var resourceTableParsed = false
     private var resourceTable: ResourceTable? = null
     private var locales: Set<Locale?>? = null
     private var manifestParsed = false
-    private var manifestXml: String? = null
-    private var apkMeta: ApkMeta? = null
-    private var iconPaths: List<IconPath?>? = null
-    private var apkSigners: MutableList<ApkSigner>? = null
+    val manifestXml: String
+        get() = xmlTranslator.xml
+    val apkMeta get() = apkTranslator.apkMeta
+    val iconPaths: List<IconPath?>
+        get() = apkTranslator.iconPaths
+    val apkSigners by lazy {
+        ArrayList<ApkSigner>().apply {
+            for (file in allCertificateData) {
+                val certificateMetas = CertificateParser
+                    .getInstance(file.data)
+                    .parse()
+                add(ApkSigner(file.path, certificateMetas))
+            }
+        }
+    }
+
     private var apkV2Signers: List<ApkV2Signer>? = null
 
     /**
      * default use empty locale
      */
-    private var preferredLocale = DEFAULT_LOCALE
+    var preferredLocale: Locale = DEFAULT_LOCALE
+        set(value) {
+            if (preferredLocale != value) {
+                field = value
 
-    /**
-     * return decoded AndroidManifest.xml
-     *
-     * @return decoded AndroidManifest.xml
-     */
-    @Throws(IOException::class)
-    fun getManifestXml(): String? {
-        parseManifest()
-        return manifestXml
-    }
-
-    /**
-     * return decoded AndroidManifest.xml
-     *
-     * @return decoded AndroidManifest.xml
-     */
-    @Throws(IOException::class)
-    fun getApkMeta(): ApkMeta? {
-        parseManifest()
-        return apkMeta
-    }
-
-    /**
-     * get locales supported from resource file
-     *
-     * @return decoded AndroidManifest.xml
-     */
-    @Throws(IOException::class)
-    fun getLocales(): Set<Locale?>? {
-        parseResourceTable()
-        return locales
-    }
-
-    /**
-     * Get the apk's all cert file info, of apk v1 signing.
-     * If cert faile not exist, return empty list.
-     */
-    @Throws(IOException::class, CertificateException::class)
-    fun getApkSigners(): List<ApkSigner>? {
-        if (apkSigners == null) {
-            parseCertificates()
+                manifestParsed = false
+            } else this
         }
-        return apkSigners
-    }
 
-    @Throws(IOException::class, CertificateException::class)
-    private fun parseCertificates() {
-        apkSigners = ArrayList()
-        for (file in allCertificateData) {
-            val parser: CertificateParser = CertificateParser.Companion.getInstance(file.data)
-            val certificateMetas = parser.parse()
-            apkSigners.add(ApkSigner(file.path, certificateMetas))
-        }
-    }
-
+//
+//    /**
+//     * get locales supported from resource file
+//     *
+//     * @return decoded AndroidManifest.xml
+//     */
+//    @Throws(IOException::class)
+//    fun getLocales(): Set<Locale?>? {
+//        parseResourceTable()
+//        return locales
+//    }
+//
     /**
      * Get the apk's all signer in apk sign block, using apk singing v2 scheme.
      * If apk v2 signing block not exists, return empty list.
@@ -115,7 +92,7 @@ abstract class AbstractApkFile : Closeable {
             val parser = ApkSignBlockParser(apkSignBlockBuf)
             val apkSigningBlock = parser.parse()
             for (signerBlock in apkSigningBlock.signerBlocks) {
-                val certificates = signerBlock!!.certificates
+                val certificates = signerBlock.certificates
                 val certificateMetas = from(certificates)
                 val apkV2Signer = ApkV2Signer(certificateMetas)
                 list.add(apkV2Signer)
@@ -129,21 +106,33 @@ abstract class AbstractApkFile : Closeable {
 
     protected class CertificateFile(val path: String, val data: ByteArray)
 
-    @Throws(IOException::class)
+
+    private var xmlTranslatorTemp = XmlTranslator()
+    private var xmlTranslator =
+        if (manifestParsed) xmlTranslatorTemp else
+            XmlTranslator().apply {
+                parseResourceTable()
+                apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
+                val xmlStreamer: XmlStreamer = CompositeXmlStreamer(this, apkTranslator)
+                val data = getFileData(AndroidConstants.MANIFEST_FILE)
+                    ?: throw ParserException("Manifest file not found")
+                transBinaryXml(data, xmlStreamer)
+                manifestParsed = true
+            }
+
+    lateinit var apkTranslator:ApkMetaTranslator
+        @Throws(IOException::class)
     private fun parseManifest() {
         if (manifestParsed) {
             return
         }
         parseResourceTable()
-        val xmlTranslator = XmlTranslator()
-        val apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
+        xmlTranslator = XmlTranslator()
+        apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
         val xmlStreamer: XmlStreamer = CompositeXmlStreamer(xmlTranslator, apkTranslator)
         val data = getFileData(AndroidConstants.MANIFEST_FILE)
             ?: throw ParserException("Manifest file not found")
         this.transBinaryXml(data, xmlStreamer)
-        manifestXml = xmlTranslator.xml
-        apkMeta = apkTranslator.apkMeta
-        iconPaths = apkTranslator.iconPaths
         manifestParsed = true
     }
 
@@ -308,30 +297,11 @@ abstract class AbstractApkFile : Closeable {
     abstract fun verifyApk(): ApkSignStatus
     @Throws(IOException::class)
     override fun close() {
-        apkSigners = null
+        apkSigners.clear()
         resourceTable = null
-        iconPaths = null
     }
 
-    /**
-     * The local used to parse apk
-     */
-    fun getPreferredLocale(): Locale {
-        return preferredLocale
-    }
 
-    /**
-     * The locale preferred. Will cause getManifestXml / getApkMeta to return different values.
-     * The default value is from os default locale setting.
-     */
-    fun setPreferredLocale(preferredLocale: Locale) {
-        if (this.preferredLocale != preferredLocale) {
-            this.preferredLocale = preferredLocale
-            manifestXml = null
-            apkMeta = null
-            manifestParsed = false
-        }
-    }
 
     /**
      * Create ApkSignBlockParser for this apk file.
@@ -349,7 +319,7 @@ abstract class AbstractApkFile : Closeable {
         }
         val maxEOCDSize = 1024 * 100
         var eocd: EOCD? = null
-        for (i in len - 22 downTo Math.max(0, len - maxEOCDSize) + 1) {
+        for (i in len - 22 downTo 0.coerceAtLeast(len - maxEOCDSize) + 1) {
             val v = buffer.getInt(i)
             if (v == EOCD.Companion.SIGNATURE) {
                 Buffers.position(buffer, i + 4)

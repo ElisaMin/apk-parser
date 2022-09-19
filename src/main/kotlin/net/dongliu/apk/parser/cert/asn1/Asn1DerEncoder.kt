@@ -48,13 +48,13 @@ object Asn1DerEncoder {
      * @throws Asn1EncodingException if the input could not be encoded
      */
     @Throws(Asn1EncodingException::class)
-    fun encode(container: Any): ByteArray? {
+    fun encode(container: Any): ByteArray {
         val containerClass: Class<*> = container.javaClass
         val containerAnnotation = containerClass.getAnnotation(Asn1Class::class.java)
             ?: throw Asn1EncodingException(
                 containerClass.name + " not annotated with " + Asn1Class::class.java.name
             )
-        val containerType: Asn1Type = containerAnnotation.type()
+        val containerType: Asn1Type = containerAnnotation.type
         return when (containerType) {
             Asn1Type.Choice -> toChoice(container)
             Asn1Type.Sequence -> toSequence(container)
@@ -63,7 +63,7 @@ object Asn1DerEncoder {
     }
 
     @Throws(Asn1EncodingException::class)
-    private fun toChoice(container: Any): ByteArray? {
+    private fun toChoice(container: Any): ByteArray {
         val containerClass: Class<*> = container.javaClass
         val fields = getAnnotatedFields(container)
         if (fields.isEmpty()) {
@@ -99,12 +99,12 @@ object Asn1DerEncoder {
         val containerClass: Class<*> = container.javaClass
         val fields = getAnnotatedFields(container)
         Collections.sort(
-            fields, Comparator.comparingInt(ToIntFunction { f: AnnotatedField -> f.annotation.index() })
+            fields, Comparator.comparingInt(ToIntFunction { f: AnnotatedField -> f.annotation.index })
         )
         if (fields.size > 1) {
             var lastField: AnnotatedField? = null
             for (field in fields) {
-                if (lastField != null && lastField.annotation.index() == field.annotation.index()) {
+                if (lastField != null && lastField.annotation.index == field.annotation.index) {
                     throw Asn1EncodingException(
                         "Fields have the same index: " + containerClass.name
                                 + "." + lastField.field.name
@@ -137,10 +137,10 @@ object Asn1DerEncoder {
     }
 
     @Throws(Asn1EncodingException::class)
-    private fun toSetOf(values: Collection<*>, elementType: Asn1Type?): ByteArray {
-        val serializedValues: MutableList<ByteArray?> = ArrayList(values.size)
+    private fun toSetOf(values: Collection<Any>, elementType: Asn1Type?): ByteArray {
+        val serializedValues: MutableList<ByteArray> = ArrayList(values.size)
         for (value in values) {
-            serializedValues.add(JavaToDerConverter.toDer(value, elementType, null))
+            serializedValues.add(JavaToDerConverter.toDer(value, elementType, null)!!)
         }
         if (serializedValues.size > 1) {
             Collections.sort(serializedValues, ByteArrayLexicographicComparator.INSTANCE)
@@ -190,7 +190,7 @@ object Asn1DerEncoder {
     private fun toInteger(value: BigInteger): ByteArray {
         return createTag(
             BerEncoding.TAG_CLASS_UNIVERSAL, false, BerEncoding.TAG_NUMBER_INTEGER,
-            *value.toByteArray()
+            value.toByteArray()
         )
     }
 
@@ -258,7 +258,7 @@ object Asn1DerEncoder {
         }
         return createTag(
             BerEncoding.TAG_CLASS_UNIVERSAL, false, BerEncoding.TAG_NUMBER_OBJECT_IDENTIFIER,
-            *encodedValue.toByteArray()
+            encodedValue.toByteArray()
         )
     }
 
@@ -366,11 +366,11 @@ object Asn1DerEncoder {
         private val mOptional: Boolean
 
         init {
-            mDataType = annotation.type()
-            mElementDataType = annotation.elementType()
-            var tagClass: Asn1TagClass = annotation.cls()
+            mDataType = annotation.type
+            mElementDataType = annotation.elementType
+            var tagClass: Asn1TagClass = annotation.cls
             if (tagClass === Asn1TagClass.Automatic) {
-                tagClass = if (annotation.tagNumber() != -1) {
+                tagClass = if (annotation.tagNumber != -1) {
                     Asn1TagClass.ContextSpecific
                 } else {
                     Asn1TagClass.Universal
@@ -378,36 +378,30 @@ object Asn1DerEncoder {
             }
             mDerTagClass = BerEncoding.getTagClass(tagClass)
             val tagNumber: Int
-            if (annotation.tagNumber() != -1) {
-                tagNumber = annotation.tagNumber()
+            if (annotation.tagNumber != -1) {
+                tagNumber = annotation.tagNumber
             } else if (mDataType === Asn1Type.Choice || mDataType === Asn1Type.Any) {
                 tagNumber = -1
             } else {
                 tagNumber = BerEncoding.getTagNumber(mDataType)
             }
             mDerTagNumber = tagNumber
-            mTagging = annotation.tagging()
-            if (mTagging === Asn1Tagging.Explicit || mTagging === Asn1Tagging.Implicit && annotation.tagNumber() == -1) {
+            mTagging = annotation.tagging
+            if (mTagging === Asn1Tagging.Explicit || mTagging === Asn1Tagging.Implicit && annotation.tagNumber == -1) {
                 throw Asn1EncodingException(
-                    "Tag number must be specified when tagging mode is " + mTagging
+                    "Tag number must be specified when tagging mode is $mTagging"
                 )
             }
-            mOptional = annotation.optional()
+            mOptional = annotation.optional
         }
 
         @Throws(Asn1EncodingException::class)
-        fun toDer(): ByteArray? {
+        fun toDer(): ByteArray {
             val fieldValue = getMemberFieldValue(mObject, field)
-            if (fieldValue == null) {
-                if (mOptional) {
-                    return null
-                }
-                throw Asn1EncodingException("Required field not set")
-            }
             val encoded = JavaToDerConverter.toDer(fieldValue, mDataType, mElementDataType)
             return when (mTagging) {
                 Asn1Tagging.Normal -> encoded
-                Asn1Tagging.Explicit -> createTag(mDerTagClass, true, mDerTagNumber, *encoded)
+                Asn1Tagging.Explicit -> createTag(mDerTagClass, true, mDerTagNumber, encoded!!)
                 Asn1Tagging.Implicit -> {
                     val originalTagNumber = BerEncoding.getTagNumber(encoded!![0])
                     if (originalTagNumber == 0x1f) {
@@ -415,7 +409,7 @@ object Asn1DerEncoder {
                     }
                     if (mDerTagNumber >= 0x1f) {
                         throw Asn1EncodingException(
-                            "Unsupported high tag number: " + mDerTagNumber
+                            "Unsupported high tag number: $mDerTagNumber"
                         )
                     }
                     encoded[0] = BerEncoding.setTagNumber(encoded[0], mDerTagNumber)
@@ -423,14 +417,14 @@ object Asn1DerEncoder {
                     encoded
                 }
 
-                else -> throw RuntimeException("Unknown tagging mode: " + mTagging)
+                else -> throw RuntimeException("Unknown tagging mode: $mTagging")
             }
         }
     }
 
     private object JavaToDerConverter {
         @Throws(Asn1EncodingException::class)
-        fun toDer(source: Any, targetType: Asn1Type?, targetElementType: Asn1Type?): ByteArray? {
+        fun toDer(source: Any, targetType: Asn1Type?, targetElementType: Asn1Type?): ByteArray {
             val sourceType: Class<*> = source.javaClass
             if (Asn1OpaqueObject::class.java == sourceType) {
                 val buf = (source as Asn1OpaqueObject).encoded
@@ -456,17 +450,23 @@ object Asn1DerEncoder {
                             BerEncoding.TAG_CLASS_UNIVERSAL,
                             false,
                             BerEncoding.TAG_NUMBER_OCTET_STRING,
-                            *value
+                            value
                         )
                     }
                 }
 
-                Asn1Type.Integer -> if (source is Int) {
-                    return toInteger(source)
-                } else if (source is Long) {
-                    return toInteger(source)
-                } else if (source is BigInteger) {
-                    return toInteger(source)
+                Asn1Type.Integer -> when (source) {
+                    is Int -> {
+                        return toInteger(source)
+                    }
+
+                    is Long -> {
+                        return toInteger(source)
+                    }
+
+                    is BigInteger -> {
+                        return toInteger(source)
+                    }
                 }
 
                 Asn1Type.ObjectIdentifier -> if (source is String) {
@@ -475,19 +475,19 @@ object Asn1DerEncoder {
 
                 Asn1Type.Sequence -> {
                     val containerAnnotation = sourceType.getAnnotation(Asn1Class::class.java)
-                    if (containerAnnotation != null && containerAnnotation.type() === Asn1Type.Sequence) {
+                    if (containerAnnotation != null && containerAnnotation.type === Asn1Type.Sequence) {
                         return toSequence(source)
                     }
                 }
 
                 Asn1Type.Choice -> {
                     val containerAnnotation = sourceType.getAnnotation(Asn1Class::class.java)
-                    if (containerAnnotation != null && containerAnnotation.type() === Asn1Type.Choice) {
+                    if (containerAnnotation != null && containerAnnotation.type === Asn1Type.Choice) {
                         return toChoice(source)
                     }
                 }
 
-                Asn1Type.SetOf -> return toSetOf(source as Collection<*>, targetElementType)
+                Asn1Type.SetOf -> return toSetOf(source as Collection<Any>, targetElementType)
                 else -> {}
             }
             throw Asn1EncodingException(

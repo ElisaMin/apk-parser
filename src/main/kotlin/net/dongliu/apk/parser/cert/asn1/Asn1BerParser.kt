@@ -55,16 +55,15 @@ object Asn1BerParser {
      * object
      */
     @Throws(Asn1DecodingException::class)
-    fun <T> parse(encoded: ByteBuffer, containerClass: Class<T>?): T {
-        val containerDataValue: BerDataValue?
-        containerDataValue = try {
+    fun <T:Any> parse(encoded: ByteBuffer, containerClass: Class<T>): T {
+
+        val containerDataValue: BerDataValue = kotlin.runCatching {
             ByteBufferBerDataValueReader(encoded).readDataValue()
-        } catch (e: BerDataValueFormatException) {
-            throw Asn1DecodingException("Failed to decode top-level data value", e)
-        }
-        if (containerDataValue == null) {
-            throw Asn1DecodingException("Empty input")
-        }
+        }.onFailure {
+            if (it is BerDataValueFormatException) {
+            throw Asn1DecodingException("Failed to decode top-level data value", it)
+        }}.getOrNull() ?: throw Asn1DecodingException("Empty input")
+
         return parse(containerDataValue, containerClass)
     }
 
@@ -92,7 +91,7 @@ object Asn1BerParser {
      * object
      */
     @Throws(Asn1DecodingException::class)
-    fun <T> parseImplicitSetOf(encoded: ByteBuffer, elementClass: Class<T>): List<T> {
+    fun <T:Any> parseImplicitSetOf(encoded: ByteBuffer, elementClass: Class<T>): List<T> {
         val containerDataValue: BerDataValue?
         containerDataValue = try {
             ByteBufferBerDataValueReader(encoded).readDataValue()
@@ -106,7 +105,7 @@ object Asn1BerParser {
     }
 
     @Throws(Asn1DecodingException::class)
-    private fun <T> parse(container: BerDataValue?, containerClass: Class<T>?): T {
+    private fun <T : Any> parse(container: BerDataValue?, containerClass: Class<T>?): T {
         if (container == null) {
             throw NullPointerException("container == null")
         }
@@ -138,7 +137,7 @@ object Asn1BerParser {
     }
 
     @Throws(Asn1DecodingException::class)
-    private fun <T> parseChoice(dataValue: BerDataValue, containerClass: Class<T>): T {
+    private fun <T : Any> parseChoice(dataValue: BerDataValue, containerClass: Class<T>): T {
         val fields = getAnnotatedFields(containerClass)
         if (fields.isEmpty()) {
             throw Asn1DecodingException(
@@ -189,16 +188,16 @@ object Asn1BerParser {
     }
 
     @Throws(Asn1DecodingException::class)
-    private fun <T> parseSequence(container: BerDataValue, containerClass: Class<T>): T {
+    private fun <T : Any> parseSequence(container: BerDataValue, containerClass: Class<T>): T {
         val fields = getAnnotatedFields(containerClass)
         Collections.sort(
-            fields, Comparator.comparingInt(ToIntFunction { f: AnnotatedField -> f.annotation.index() })
+            fields, Comparator.comparingInt { f: AnnotatedField -> f.annotation.index }
         )
         // Check that there are no fields with the same index
         if (fields.size > 1) {
             var lastField: AnnotatedField? = null
             for (field in fields) {
-                if (lastField != null && lastField.annotation.index() == field.annotation.index()) {
+                if (lastField != null && lastField.annotation.index == field.annotation.index) {
                     throw Asn1DecodingException(
                         "Fields have the same index: " + containerClass.name
                                 + "." + lastField.field.name
@@ -221,8 +220,7 @@ object Asn1BerParser {
         var nextUnreadFieldIndex = 0
         val elementsReader = container.contentsReader()
         while (nextUnreadFieldIndex < fields.size) {
-            val dataValue: BerDataValue?
-            dataValue = try {
+            val dataValue: BerDataValue? = try {
                 elementsReader.readDataValue()
             } catch (e: BerDataValueFormatException) {
                 throw Asn1DecodingException("Malformed data value", e)
@@ -268,7 +266,7 @@ object Asn1BerParser {
      * of elements -- it's an unordered collection.
      */
     @Throws(Asn1DecodingException::class)
-    private fun <T> parseSetOf(container: BerDataValue, elementClass: Class<T>): List<T> {
+    private fun <T:Any> parseSetOf(container: BerDataValue, elementClass: Class<T>): List<T> {
         val result: MutableList<T> = ArrayList()
         val elementsReader = container.contentsReader()
         while (true) {
@@ -301,11 +299,11 @@ object Asn1BerParser {
                 containerClass.name + " is not annotated with "
                         + Asn1Class::class.java.name
             )
-        return when (containerAnnotation.type()) {
-            Asn1Type.Choice, Asn1Type.Sequence -> containerAnnotation.type()
+        return when (containerAnnotation.type) {
+            Asn1Type.Choice, Asn1Type.Sequence -> containerAnnotation.type
             else -> throw Asn1DecodingException(
                 "Unsupported ASN.1 container annotation type: "
-                        + containerAnnotation.type()
+                        + containerAnnotation.type
             )
         }
     }
@@ -437,10 +435,10 @@ object Asn1BerParser {
         val isOptional: Boolean
 
         init {
-            dataType = annotation.type()
-            var tagClass: Asn1TagClass = annotation.cls()
+            dataType = annotation.type
+            var tagClass: Asn1TagClass = annotation.cls
             if (tagClass === Asn1TagClass.Automatic) {
-                tagClass = if (annotation.tagNumber() != -1) {
+                tagClass = if (annotation.tagNumber != -1) {
                     Asn1TagClass.ContextSpecific
                 } else {
                     Asn1TagClass.Universal
@@ -448,21 +446,21 @@ object Asn1BerParser {
             }
             berTagClass = BerEncoding.getTagClass(tagClass)
             val tagNumber: Int
-            if (annotation.tagNumber() != -1) {
-                tagNumber = annotation.tagNumber()
+            if (annotation.tagNumber != -1) {
+                tagNumber = annotation.tagNumber
             } else if (dataType === Asn1Type.Choice || dataType === Asn1Type.Any) {
                 tagNumber = -1
             } else {
                 tagNumber = BerEncoding.getTagNumber(dataType)
             }
             berTagNumber = tagNumber
-            tagging = annotation.tagging()
-            if (tagging === Asn1Tagging.Explicit || tagging === Asn1Tagging.Implicit && annotation.tagNumber() == -1) {
+            tagging = annotation.tagging
+            if (tagging === Asn1Tagging.Explicit || tagging === Asn1Tagging.Implicit && annotation.tagNumber == -1) {
                 throw Asn1DecodingException(
                     "Tag number must be specified when tagging mode is " + tagging
                 )
             }
-            isOptional = annotation.optional()
+            isOptional = annotation.optional
         }
 
         @Throws(Asn1DecodingException::class)
@@ -537,7 +535,7 @@ object Asn1BerParser {
 
         private val EMPTY_BYTE_ARRAY = ByteArray(0)
         @Throws(Asn1DecodingException::class)
-        fun <T> convert(
+        fun <T : Any> convert(
             sourceType: Asn1Type,
             dataValue: BerDataValue,
             targetType: Class<T>
@@ -571,14 +569,14 @@ object Asn1BerParser {
 
                 Asn1Type.Sequence -> {
                     val containerAnnotation = targetType.getAnnotation(Asn1Class::class.java)
-                    if (containerAnnotation != null && containerAnnotation.type() === Asn1Type.Sequence) {
+                    if (containerAnnotation != null && containerAnnotation.type === Asn1Type.Sequence) {
                         return parseSequence(dataValue, targetType)
                     }
                 }
 
                 Asn1Type.Choice -> {
                     val containerAnnotation = targetType.getAnnotation(Asn1Class::class.java)
-                    if (containerAnnotation != null && containerAnnotation.type() === Asn1Type.Choice) {
+                    if (containerAnnotation != null && containerAnnotation.type === Asn1Type.Choice) {
                         return parseChoice(dataValue, targetType)
                     }
                 }

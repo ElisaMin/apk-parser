@@ -21,8 +21,8 @@ import java.nio.ByteBuffer
  * ASN.1 Basic Encoding Rules (BER) data value -- see `X.690`.
  */
 class BerDataValue internal constructor(
-    private val encoded: ByteBuffer,
-    private val encodedContents: ByteBuffer,
+    private val encodedSource: ByteBuffer,
+    private val encodedContentsSource: ByteBuffer,
     /**
      * Returns the tag class of this data value. See [BerEncoding] `TAG_CLASS`
      * constants.
@@ -43,22 +43,18 @@ class BerDataValue internal constructor(
     /**
      * Returns the encoded form of this data value.
      */
-    fun getEncoded(): ByteBuffer {
-        return encoded.slice()
-    }
+    val encoded get() = encodedSource.slice()
 
     /**
      * Returns the encoded contents of this data value.
      */
-    fun getEncodedContents(): ByteBuffer {
-        return encodedContents.slice()
-    }
+    val encodedContents get() = encodedContentsSource.slice()
 
     /**
      * Returns a new reader of the contents of this data value.
      */
     fun contentsReader(): BerDataValueReader {
-        return ByteBufferBerDataValueReader(getEncodedContents())
+        return ByteBufferBerDataValueReader(encodedContents)
     }
 
     /**

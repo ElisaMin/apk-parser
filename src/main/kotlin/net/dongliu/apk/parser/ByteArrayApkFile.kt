@@ -56,10 +56,10 @@ class ByteArrayApkFile(private var apkData: ByteArray?) : AbstractApkFile(), Clo
         return ByteBuffer.wrap(apkData).asReadOnlyBuffer()
     }
 
-    @Deprecated("")
-    override fun verifyApk(): ApkSignStatus {
-        throw UnsupportedOperationException()
-    }
+//    @Deprecated("")
+//    override fun verifyApk(): ApkSignStatus {
+//        throw UnsupportedOperationException()
+//    }
 
     @Throws(IOException::class)
     override fun close() {

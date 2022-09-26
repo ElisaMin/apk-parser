@@ -22,8 +22,7 @@ import java.security.cert.X509Certificate
 class JSSECertificateParser(data: ByteArray) : CertificateParser(data) {
     @Throws(CertificateException::class)
     override fun parse(): List<CertificateMeta> {
-        val contentInfo: ContentInfo
-        contentInfo = try {
+        val contentInfo: ContentInfo = try {
             Asn1BerParser.parse(ByteBuffer.wrap(data), ContentInfo::class.java)
         } catch (e: Asn1DecodingException) {
             throw CertificateException(e)
@@ -31,8 +30,7 @@ class JSSECertificateParser(data: ByteArray) : CertificateParser(data) {
         if (Pkcs7Constants.OID_SIGNED_DATA != contentInfo.contentType) {
             throw CertificateException("Unsupported ContentInfo.contentType: " + contentInfo.contentType)
         }
-        val signedData: SignedData
-        signedData = try {
+        val signedData: SignedData = try {
             Asn1BerParser.parse(contentInfo.content!!.encoded, SignedData::class.java)
         } catch (e: Asn1DecodingException) {
             throw CertificateException(e)

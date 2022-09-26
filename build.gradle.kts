@@ -16,7 +16,7 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.71.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.71.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.0")
-    testImplementation("junit:junit:4.13.1")
+    testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
 }
 

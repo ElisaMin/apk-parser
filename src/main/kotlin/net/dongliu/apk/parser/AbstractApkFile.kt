@@ -17,136 +17,103 @@ import java.security.cert.CertificateException
 import java.util.*
 import kotlin.collections.ArrayList
 
+
+internal typealias CertificateFile = Pair<String,ByteArray>
+internal inline val CertificateFile.path get() = first
+internal inline val CertificateFile.data get() = second
+
+
 /**
  * Common Apk Parser methods.
  * This Class is not thread-safe.
  *
  * @author Liu Dong
  */
-abstract class AbstractApkFile : Closeable {
-    private var dexClasses: Array<DexClass?> = emptyArray()
-    private var resourceTableParsed = false
+abstract class AbstractApkFile:Closeable {
+
+    protected abstract val allCertificateData: List<CertificateFile>
+
+    val manifestXml: String get()  = xmlOrrThrows.xml
+    val apkMeta: ApkMeta get() {
+        xmlTranslator
+        return apkTranslator!!.apkMeta
+    }
+    var locales: Set<Locale> = emptySet()
+        private set
+    var preferredLocale: Locale = Locale.getDefault()
+        set(value) {
+            if (preferredLocale != value) {
+                field = value
+                xmlTranslator = null
+            }
+        }
+    private var xmlTranslator: XmlTranslator? = null
+        get() = field ?: genXmlTranslator().also {
+            field = it
+        }
+        set(value) {
+            require(value == null) {
+                IllegalArgumentException("null only")
+            }
+            apkTranslator = null
+        }
     private var resourceTable: ResourceTable? = null
-    private var locales: Set<Locale?>? = null
-    private var manifestParsed = false
-    val manifestXml: String
-        get() = xmlTranslator.xml
-    val apkMeta get() = apkTranslator.apkMeta
-    val iconPaths: List<IconPath?>
-        get() = apkTranslator.iconPaths
+        get() {
+            if (field != null) {
+                return field
+            }
+            locales = emptySet()
+            field = getFileData(AndroidConstants.RESOURCE_FILE)?.let {
+                ResourceTableParser(ByteBuffer.wrap(it))
+            }?.let {
+                it.parse()
+                locales = it.locales
+                it.resourceTable
+            }
+            return field?:ResourceTable(null)
+        }
+
+
+    private var apkTranslator:ApkMetaTranslator? = null
+        get() {
+            if (field == null) xmlTranslator
+            return field
+        }
+    private val xmlOrrThrows get() = xmlTranslator?:throw IOException("xml is null")
+
+    private fun genXmlTranslator():XmlTranslator {
+        val translator = XmlTranslator()
+        apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
+        transBinaryXml(
+            getFileData(AndroidConstants.MANIFEST_FILE) ?: throw ParserException("Manifest file not found"),
+            CompositeXmlStreamer(translator, apkTranslator!!)
+        )
+        return translator
+    }
+    override fun close() {
+        kotlin.runCatching {
+            resourceTable = null
+            xmlTranslator = null
+        }
+    }
+
     val apkSingers by lazy {
         ArrayList<ApkSigner>().apply {
             for (file in allCertificateData) {
                 val certificateMetas = CertificateParser
                     .getInstance(file.data)
                     .parse()
+                println(certificateMetas.size)
                 add(ApkSigner(file.path, certificateMetas))
             }
         }
     }
-
-    private var apkV2Signers: List<ApkV2Signer>? = null
-
-    /**
-     * default use empty locale
-     */
-    var preferredLocale: Locale = DEFAULT_LOCALE
-        set(value) {
-            if (preferredLocale != value) {
-                field = value
-
-                manifestParsed = false
-            }
-        }
-
-//
-//    /**
-//     * get locales supported from resource file
-//     *
-//     * @return decoded AndroidManifest.xml
-//     */
-//    @Throws(IOException::class)
-//    fun getLocales(): Set<Locale?>? {
-//        parseResourceTable()
-//        return locales
-//    }
-//
-    /**
-     * Get the apk's all signer in apk sign block, using apk singing v2 scheme.
-     * If apk v2 signing block not exists, return empty list.
-     */
-    @get:Throws(IOException::class, CertificateException::class)
-    val apkV2Singers: List<ApkV2Signer>?
-        get() {
-            if (apkV2Signers == null) {
-                parseApkSigningBlock()
-            }
-            return apkV2Signers
-        }
-
-    @Throws(IOException::class, CertificateException::class)
-    private fun parseApkSigningBlock() {
-        val list: MutableList<ApkV2Signer> = ArrayList()
-        val apkSignBlockBuf = findApkSignBlock()
-        if (apkSignBlockBuf != null) {
-            val parser = ApkSignBlockParser(apkSignBlockBuf)
-            val apkSigningBlock = parser.parse()
-            for (signerBlock in apkSigningBlock.signerBlocks) {
-                val certificates = signerBlock.certificates
-                val certificateMetas = from(certificates)
-                val apkV2Signer = ApkV2Signer(certificateMetas)
-                list.add(apkV2Signer)
-            }
-        }
-        apkV2Signers = list
-    }
-
-    @get:Throws(IOException::class)
-    protected abstract val allCertificateData: List<CertificateFile>
-
-    protected class CertificateFile(val path: String, val data: ByteArray)
-
-
-    private var xmlTranslatorTemp = XmlTranslator()
-    private var xmlTranslator =
-        if (manifestParsed) xmlTranslatorTemp else
-            XmlTranslator().apply {
-                parseResourceTable()
-                apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
-                val xmlStreamer: XmlStreamer = CompositeXmlStreamer(this, apkTranslator)
-                val data = getFileData(AndroidConstants.MANIFEST_FILE)
-                    ?: throw ParserException("Manifest file not found")
-                transBinaryXml(data, xmlStreamer)
-                manifestParsed = true
-            }
-
-    lateinit var apkTranslator:ApkMetaTranslator
-        @Throws(IOException::class)
-    private fun parseManifest() {
-        if (manifestParsed) {
-            return
-        }
-        parseResourceTable()
-        xmlTranslator = XmlTranslator()
-        apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
-        val xmlStreamer: XmlStreamer = CompositeXmlStreamer(xmlTranslator, apkTranslator)
-        val data = getFileData(AndroidConstants.MANIFEST_FILE)
-            ?: throw ParserException("Manifest file not found")
-        this.transBinaryXml(data, xmlStreamer)
-        manifestParsed = true
-    }
-
     /**
      * read file in apk into bytes
      */
     @Throws(IOException::class)
     abstract fun getFileData(path: String): ByteArray?
-
-    /**
-     * return the whole apk file as ByteBuffer
-     */
-    @Throws(IOException::class)
-    protected abstract fun fileData(): ByteBuffer
+    abstract fun fileData(): ByteBuffer
 
     /**
      * trans binary xml file to text xml file.
@@ -157,156 +124,25 @@ abstract class AbstractApkFile : Closeable {
     @Throws(IOException::class)
     fun transBinaryXml(path: String): String? {
         val data = getFileData(path) ?: return null
-        parseResourceTable()
+        resourceTable
         val xmlTranslator = XmlTranslator()
         this.transBinaryXml(data, xmlTranslator)
         return xmlTranslator.xml
     }
-
-    @Throws(IOException::class)
     private fun transBinaryXml(data: ByteArray, xmlStreamer: XmlStreamer) {
-        parseResourceTable()
+        resourceTable
         val buffer = ByteBuffer.wrap(data)
         val binaryXmlParser = BinaryXmlParser(buffer, resourceTable!!)
         binaryXmlParser.setLocale(preferredLocale)
         binaryXmlParser.xmlStreamer = xmlStreamer
         binaryXmlParser.parse()
     }// adaptive icon?
-
-    /**
-     * This method return icons specified in android manifest file, application.
-     * The icons could be file icon, color icon, or adaptive icon, etc.
-     *
-     * @return icon files.
-     */
-    @get:Throws(IOException::class)
-    val allIcons: List<IconFace>
-        get() {
-            parseManifest()
-            val iconPaths = iconPaths
-            if (iconPaths.isEmpty()) {
-                return emptyList()
-            }
-            val iconFaces: MutableList<IconFace> = ArrayList(iconPaths.size)
-            for (iconPath in iconPaths) {
-                val filePath = iconPath!!.path
-                if (filePath != null && filePath.endsWith(".xml")) {
-                    // adaptive icon?
-                    val data = getFileData(filePath) ?: continue
-                    parseResourceTable()
-                    val iconParser = AdaptiveIconParser()
-                    this.transBinaryXml(data, iconParser)
-                    var backgroundIcon: Icon? = null
-                    val background = iconParser.background
-                    if (background != null) {
-                        backgroundIcon = newFileIcon(background, iconPath.density)
-                    }
-                    var foregroundIcon: Icon? = null
-                    val foreground = iconParser.foreground
-                    if (foreground != null) {
-                        foregroundIcon = newFileIcon(foreground, iconPath.density)
-                    }
-                    val icon = AdaptiveIcon(foregroundIcon, backgroundIcon)
-                    iconFaces.add(icon)
-                } else {
-                    val icon = newFileIcon(filePath!!, iconPath.density)
-                    iconFaces.add(icon)
-                }
-            }
-            return iconFaces
-        }
-
-    @Throws(IOException::class)
-    private fun newFileIcon(filePath: String, density: Int): Icon {
-        return Icon(filePath, density, getFileData(filePath))
-    }
-
-    /**
-     * get class infos form dex file. currently only class name
-     */
-    @Throws(IOException::class)
-    fun getDexClasses(): Array<DexClass?> {
-        return dexClasses
-    }
-
-    private fun mergeDexClasses(first: Array<DexClass?>, second: Array<DexClass?>): Array<DexClass?> {
-        val result = arrayOfNulls<DexClass>(first.size + second.size)
-        System.arraycopy(first, 0, result, 0, first.size)
-        System.arraycopy(second, 0, result, first.size, second.size)
-        return result
-    }
-
-    @Throws(IOException::class)
-    private fun parseDexFile(path: String): Array<DexClass?> {
-        val data = getFileData(path)
-        if (data == null) {
-            val msg = String.format("Dex file %s not found", path)
-            throw ParserException(msg)
-        }
-        val buffer = ByteBuffer.wrap(data)
-        val dexParser = DexParser(buffer)
-        return dexParser.parse()
-    }
-
-    @Throws(IOException::class)
-    private fun parseDexFiles() {
-        dexClasses = parseDexFile(AndroidConstants.DEX_FILE)
-        for (i in 2..999) {
-            val path = String.format(Locale.ROOT, AndroidConstants.DEX_ADDITIONAL, i)
-            try {
-                val classes = parseDexFile(path)
-                dexClasses = mergeDexClasses(dexClasses, classes)
-            } catch (e: ParserException) {
-                break
-            }
-        }
-    }
-
-    /**
-     * parse resource table.
-     */
-    @Throws(IOException::class)
-    private fun parseResourceTable() {
-        if (resourceTableParsed) {
-            return
-        }
-        resourceTableParsed = true
-        val data = getFileData(AndroidConstants.RESOURCE_FILE)
-        if (data == null) {
-            // if no resource entry has been found, we assume it is not needed by this APK
-            resourceTable = ResourceTable(null)
-            locales = emptySet<Locale>()
-            return
-        }
-        val buffer = ByteBuffer.wrap(data)
-        val resourceTableParser = ResourceTableParser(buffer)
-        resourceTableParser.parse()
-        resourceTable = resourceTableParser.resourceTable
-        locales = resourceTableParser.locales
-    }
-
-    /**
-     * Check apk sign. This method only use apk v1 scheme verifier
-     *
-     */
-    @Deprecated("using google official ApkVerifier of apksig lib instead.")
-    @Throws(IOException::class)
-    abstract fun verifyApk(): ApkSignStatus
-    @Throws(IOException::class)
-    override fun close() {
-        apkSingers.clear()
-        resourceTable = null
-    }
-
-
-
     /**
      * Create ApkSignBlockParser for this apk file.
      *
      * @return null if do not have sign block
      */
-    @Throws(IOException::class)
-    protected fun findApkSignBlock(): ByteBuffer? {
+    private fun findApkSignBlock(): ByteBuffer? {
         val buffer = fileData().order(ByteOrder.LITTLE_ENDIAN)
         val len = buffer.limit()
         // first find zip end of central directory entry
@@ -350,8 +186,246 @@ abstract class AbstractApkFile : Closeable {
         } else Buffers.sliceAndSkip(buffer, blockSize - magicStrLen)
         // now at the start of signing block
     }
-
     companion object {
-        private val DEFAULT_LOCALE = Locale.US
+    }
+    val iconPaths: List<IconPath?>
+        get() = apkTranslator!!.iconPaths
+    /**
+     * This method return icons specified in android manifest file, application.
+     * The icons could be file icon, color icon, or adaptive icon, etc.
+     *
+     * @return icon files.
+     */
+    val allIcons: List<IconFace>
+        get() {
+            xmlTranslator
+            val iconPaths = iconPaths
+            if (iconPaths.isEmpty()) {
+                return emptyList()
+            }
+            val iconFaces: MutableList<IconFace> = ArrayList(iconPaths.size)
+            for (iconPath in iconPaths) {
+                val filePath = iconPath!!.path
+                if (filePath != null && filePath.endsWith(".xml")) {
+                    // adaptive icon?
+                    val data = getFileData(filePath) ?: continue
+                    resourceTable
+                    val iconParser = AdaptiveIconParser()
+                    this.transBinaryXml(data, iconParser)
+                    var backgroundIcon: Icon? = null
+                    val background = iconParser.background
+                    if (background != null) {
+                        backgroundIcon = newFileIcon(background, iconPath.density)
+                    }
+                    var foregroundIcon: Icon? = null
+                    val foreground = iconParser.foreground
+                    if (foreground != null) {
+                        foregroundIcon = newFileIcon(foreground, iconPath.density)
+                    }
+                    val icon = AdaptiveIcon(foregroundIcon, backgroundIcon)
+                    iconFaces.add(icon)
+                } else {
+                    val icon = newFileIcon(filePath!!, iconPath.density)
+                    iconFaces.add(icon)
+                }
+            }
+            return iconFaces
+        }
+
+    @Throws(IOException::class)
+    private fun newFileIcon(filePath: String, density: Int): Icon {
+        return Icon(filePath, density, getFileData(filePath))
+    }
+
+    private fun mergeDexClasses(first: Array<DexClass?>, second: Array<DexClass?>): Array<DexClass?> {
+        val result = arrayOfNulls<DexClass>(first.size + second.size)
+        System.arraycopy(first, 0, result, 0, first.size)
+        System.arraycopy(second, 0, result, first.size, second.size)
+        return result
+    }
+
+    @Throws(IOException::class)
+    private fun parseDexFile(path: String): Array<DexClass?> {
+        val data = getFileData(path)
+        if (data == null) {
+            val msg = String.format("Dex file %s not found", path)
+            throw ParserException(msg)
+        }
+        val buffer = ByteBuffer.wrap(data)
+        val dexParser = DexParser(buffer)
+        return dexParser.parse()
+    }
+    var dexClasses: Array<DexClass?> = emptyArray()
+        private set
+        get() {
+            field = parseDexFile(AndroidConstants.DEX_FILE)
+            for (i in 2..999) {
+                val path = String.format(Locale.ROOT, AndroidConstants.DEX_ADDITIONAL, i)
+                try {
+                    val classes = parseDexFile(path)
+                    field = mergeDexClasses(field, classes)
+                } catch (e: ParserException) {
+                    break
+                }
+            }
+            return field
+        }
+    private var apkV2Signers: List<ApkV2Signer>? = null
+    /**
+     * Get the apk's all signer in apk sign block, using apk singing v2 scheme.
+     * If apk v2 signing block not exists, return empty list.
+     */
+    @get:Throws(IOException::class, CertificateException::class)
+    val apkV2Singers: List<ApkV2Signer>?
+        get() {
+            if (apkV2Signers == null) {
+                parseApkSigningBlock()
+            }
+            return apkV2Signers
+        }
+
+    @Throws(IOException::class, CertificateException::class)
+    private fun parseApkSigningBlock() {
+        val list: MutableList<ApkV2Signer> = ArrayList()
+        val apkSignBlockBuf = findApkSignBlock()
+        if (apkSignBlockBuf != null) {
+            val parser = ApkSignBlockParser(apkSignBlockBuf)
+            val apkSigningBlock = parser.parse()
+            for (signerBlock in apkSigningBlock.signerBlocks) {
+                val certificates = signerBlock.certificates
+                val certificateMetas = from(certificates)
+                val apkV2Signer = ApkV2Signer(certificateMetas)
+                list.add(apkV2Signer)
+            }
+        }
+        apkV2Signers = list
     }
 }
+
+//abstract class AbstractApkFileOld : Closeable {
+//    private var dexClasses: Array<DexClass?> = emptyArray()
+//    private var resourceTableParsed = false
+//    private var resourceTable: ResourceTable? = ResourceTable(null)
+//        get()  {
+//            if (resourceTableParsed) {
+//                return field
+//            }
+//            resourceTableParsed = true
+//            val data = getFileData(AndroidConstants.RESOURCE_FILE)
+//            if (data == null) {
+//                // if no resource entry has been found, we assume it is not needed by this APK
+//                locales = emptySet<Locale>()
+//                return ResourceTable(null)
+//            }
+//            val buffer = ByteBuffer.wrap(data)
+//            val resourceTableParser = ResourceTableParser(buffer)
+//            resourceTableParser.parse()
+//            locales = resourceTableParser.locales
+//            return resourceTableParser.resourceTable
+//        }
+//    var locales: Set<Locale?> = emptySet()
+//        private set
+//
+//    private var manifestParsed = false
+//    val manifestXml: String
+//        get() = xmlTranslator.xml
+//    val apkMeta: ApkMeta
+//        get() {
+//
+//            return apkTranslator.apkMeta
+//        }
+//    val iconPaths: List<IconPath?>
+//        get() = apkTranslator.iconPaths
+//    val apkSingers by lazy {
+//        ArrayList<ApkSigner>().apply {
+//            for (file in allCertificateData) {
+//                val certificateMetas = CertificateParser
+//                    .getInstance(file.data)
+//                    .parse()
+//                println(certificateMetas.size)
+//                add(ApkSigner(file.path, certificateMetas))
+//            }
+//        }
+//    }
+//
+//    private var apkV2Signers: List<ApkV2Signer>? = null
+//
+//    /**
+//     * default use empty locale
+//     */
+//    var preferredLocale: Locale = DEFAULT_LOCALE
+//        set(value) {
+//            if (preferredLocale != value) {
+//                field = value
+//                manifestParsed = false
+//            }
+//        }
+//
+////
+////    /**
+////     * get locales supported from resource file
+////     *
+////     * @return decoded AndroidManifest.xml
+////     */
+////    @Throws(IOException::class)
+////    fun getLocales(): Set<Locale?>? {
+////        parseResourceTable()
+////        return locales
+////    }
+////
+//
+//
+//    @get:Throws(IOException::class)
+//    protected abstract val allCertificateData: List<CertificateFile>
+//
+//    protected class CertificateFile(val path: String, val data: ByteArray)
+//
+//
+//    private var xmlTranslator = XmlTranslator()
+//        get() {
+//            return if (manifestParsed) field else {
+//                val tmp = XmlTranslator()
+//                val xmlStreamer: XmlStreamer = CompositeXmlStreamer(tmp, apkTranslator)
+//                val data = getFileData(AndroidConstants.MANIFEST_FILE)
+//                    ?: throw ParserException("Manifest file not found")
+//                transBinaryXml(data, xmlStreamer)
+//                manifestParsed = true
+//                tmp
+//            }
+//
+//        }
+//
+//
+//    private val apkTranslator:ApkMetaTranslator
+//        get() {
+//            xmlTranslator
+//            return ApkMetaTranslator(resourceTable!!, preferredLocale)
+//        }
+//
+//        @Throws(IOException::class)
+////    private fun parseManifest() {
+////        if (manifestParsed) return
+////        resourceTable
+////        xmlTranslator = XmlTranslator()
+////         ApkMetaTranslator(resourceTable!!, preferredLocale)
+////        val xmlStreamer: XmlStreamer = CompositeXmlStreamer(xmlTranslator, apkTranslator)
+////        val data = getFileData(AndroidConstants.MANIFEST_FILE)
+////            ?: throw ParserException("Manifest file not found")
+////        this.transBinaryXml(data, xmlStreamer)
+////        manifestParsed = true
+////    }
+//
+//    /**
+//     * read file in apk into bytes
+//     */
+//    @Throws(IOException::class)
+//    abstract fun getFileData(path: String): ByteArray?
+//
+//    /**
+//     * return the whole apk file as ByteBuffer
+//     */
+//    @Throws(IOException::class)
+//    protected abstract fun fileData(): ByteBuffer
+//
+//
+//}

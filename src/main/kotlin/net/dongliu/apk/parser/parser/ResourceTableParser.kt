@@ -64,10 +64,11 @@ class ResourceTableParser(buffer: ByteBuffer) {
      * read one package
      */
     private fun readPackage(packageHeader: PackageHeader): Pair<ResourcePackage, PackageHeader> {
-        var pair = Pair<ResourcePackage?, PackageHeader?>(null,null)
+        var pair = Pair<ResourcePackage?, PackageHeader?>(null,packageHeader)
         //read packageHeader
         val resourcePackage = ResourcePackage(packageHeader)
         pair = pair.copy(first = resourcePackage)
+        require(pair.first!= null)
         val beginPos = buffer.position().toLong()
         // read type string pool
         if (packageHeader.typeStrings > 0) {
@@ -153,6 +154,7 @@ class ResourceTableParser(buffer: ByteBuffer) {
                 else -> throw ParserException("unexpected chunk type: 0x" + chunkHeader.chunkType.toInt())
             }
         }
+        require(pair.second!= null)
         return Pair(pair.first!!,pair.second!!)
     }
 

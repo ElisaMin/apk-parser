@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import static junit.framework.TestCase.assertEquals;
 
@@ -19,7 +20,7 @@ public class ByteArrayApkFileTest {
 
     @Test
     public void testParserMeta() throws IOException {
-        String path = getClass().getClassLoader().getResource("apks/Twitter_v7.93.2.apk").getPath();
+        String path = Objects.requireNonNull(getClass().getClassLoader().getResource("apks/Twitter_v7.93.2.apk")).getPath();
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         try (ByteArrayApkFile apkFile = new ByteArrayApkFile(bytes)) {
             apkFile.setPreferredLocale(Locale.ENGLISH);
@@ -30,7 +31,7 @@ public class ByteArrayApkFileTest {
 
     @Test
     public void testGetSignature() throws IOException, CertificateException {
-        String path = getClass().getClassLoader().getResource("apks/Twitter_v7.93.2.apk").getPath();
+        String path = Objects.requireNonNull(getClass().getClassLoader().getResource("apks/Twitter_v7.93.2.apk")).getPath();
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         try (ByteArrayApkFile apkFile = new ByteArrayApkFile(bytes)) {
             List<ApkSigner> apkSingers = apkFile.getApkSingers();

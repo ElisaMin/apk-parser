@@ -15,7 +15,8 @@ import java.util.*
 class ApkMetaTranslator(private val resourceTable: ResourceTable, private val locale: Locale?) : XmlStreamer {
     private val tagStack = arrayOfNulls<String>(100)
     private var depth = 0
-    private val apkMetaBuilder: ApkMeta.Builder = ApkMeta.newBuilder()
+    var apkMeta = ApkMeta()
+        private set
     var iconPaths = emptyList<IconPath>()
         private set
 
@@ -23,23 +24,23 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
         val attributes = xmlNodeStartTag.attributes
         when (xmlNodeStartTag.name) {
             "application" -> {
-                apkMetaBuilder.setDebuggable(attributes.getBoolean("debuggable", false))
+                apkMeta = apkMeta.copy(isDebuggable = attributes.getBoolean("debuggable", false))
                 //TODO fix this part in a better way. Workaround for this: https://github.com/hsiafan/apk-parser/issues/119
-                if (apkMetaBuilder.split == null) apkMetaBuilder.setSplit(attributes.getString("split"))
-                if (apkMetaBuilder.configForSplit == null) apkMetaBuilder.setConfigForSplit(attributes.getString("configForSplit"))
-                if (!apkMetaBuilder.isFeatureSplit) apkMetaBuilder.setIsFeatureSplit(
+                if (apkMeta.split == null) apkMeta = apkMeta.copy(split = attributes.getString("split"))
+                if (apkMeta.configForSplit == null) apkMeta = apkMeta.copy(configForSplit = attributes.getString("configForSplit"))
+                if (!apkMeta.isFeatureSplit) apkMeta = apkMeta.copy(isFeatureSplit =
                     attributes.getBoolean(
                         "isFeatureSplit",
                         false
                     )
                 )
-                if (!apkMetaBuilder.isSplitRequired) apkMetaBuilder.setIsSplitRequired(
+                if (!apkMeta.isSplitRequired) apkMeta = apkMeta.copy(isSplitRequired =
                     attributes.getBoolean(
                         "isSplitRequired",
                         false
                     )
                 )
-                if (!apkMetaBuilder.isolatedSplits) apkMetaBuilder.setIsolatedSplits(
+                if (!apkMeta.isolatedSplits) apkMeta = apkMeta.copy(isolatedSplits =
                     attributes.getBoolean(
                         "isolatedSplits",
                         false
@@ -47,7 +48,7 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                 )
                 val label = attributes.getString("label")
                 if (label != null) {
-                    apkMetaBuilder.setLabel(label)
+                    apkMeta = apkMeta.copy(label = label)
                 }
                 val iconAttr = attributes["icon"]
                 if (iconAttr != null) {
@@ -64,20 +65,20 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                                 val path = resourceEntry.toStringValue(resourceTable, locale)
                                 if (type.density == Densities.DEFAULT) {
                                     hasDefault = true
-                                    apkMetaBuilder.setIcon(path)
+                                    apkMeta = apkMeta.copy(icon = path)
                                 }
                                 val iconPath = IconPath(path, type.density)
                                 icons.add(iconPath)
                             }
                             if (!hasDefault) {
-                                apkMetaBuilder.setIcon(icons[0].path)
+                                apkMeta = apkMeta.copy(icon = icons[0].path)
                             }
                             iconPaths = icons
                         }
                     } else {
                         val value = iconAttr.value
                         if (value != null) {
-                            apkMetaBuilder.setIcon(value)
+                            apkMeta = apkMeta.copy(icon = value)
                             val iconPath = IconPath(value, Densities.DEFAULT)
                             iconPaths = listOf(iconPath)
                         }
@@ -86,26 +87,26 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
             }
 
             "manifest" -> {
-                apkMetaBuilder.setPackageName(attributes.getString("package"))
-                apkMetaBuilder.setVersionName(attributes.getString("versionName"))
-                apkMetaBuilder.setRevisionCode(attributes.getLong("revisionCode"))
-                apkMetaBuilder.setSharedUserId(attributes.getString("sharedUserId"))
-                apkMetaBuilder.setSharedUserLabel(attributes.getString("sharedUserLabel"))
-                if (apkMetaBuilder.split == null) apkMetaBuilder.setSplit(attributes.getString("split"))
-                if (apkMetaBuilder.configForSplit == null) apkMetaBuilder.setConfigForSplit(attributes.getString("configForSplit"))
-                if (!apkMetaBuilder.isFeatureSplit) apkMetaBuilder.setIsFeatureSplit(
+                apkMeta = apkMeta.copy(packageName = attributes.getString("package"))
+                apkMeta = apkMeta.copy(versionName = attributes.getString("versionName"))
+                apkMeta = apkMeta.copy(revisionCode = attributes.getLong("revisionCode"))
+                apkMeta = apkMeta.copy(sharedUserId = attributes.getString("sharedUserId"))
+                apkMeta = apkMeta.copy(sharedUserLabel = attributes.getString("sharedUserLabel"))
+                if (apkMeta.split == null) apkMeta = apkMeta.copy(split = attributes.getString("split"))
+                if (apkMeta.configForSplit == null) apkMeta = apkMeta.copy(configForSplit = attributes.getString("configForSplit"))
+                if (!apkMeta.isFeatureSplit) apkMeta = apkMeta.copy(isFeatureSplit =
                     attributes.getBoolean(
                         "isFeatureSplit",
                         false
                     )
                 )
-                if (!apkMetaBuilder.isSplitRequired) apkMetaBuilder.setIsSplitRequired(
+                if (!apkMeta.isSplitRequired) apkMeta = apkMeta.copy(isSplitRequired =
                     attributes.getBoolean(
                         "isSplitRequired",
                         false
                     )
                 )
-                if (!apkMetaBuilder.isolatedSplits) apkMetaBuilder.setIsolatedSplits(
+                if (!apkMeta.isolatedSplits) apkMeta = apkMeta.copy(isolatedSplits =
                     attributes.getBoolean(
                         "isolatedSplits",
                         false
@@ -119,37 +120,37 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                     }
                     versionCode = majorVersionCode shl 32 or (versionCode and 0xFFFFFFFFL)
                 }
-                if (versionCode != null) apkMetaBuilder.setVersionCode(versionCode)
+                if (versionCode != null) apkMeta = apkMeta.copy(versionCode = versionCode)
                 val installLocation = attributes.getString("installLocation")
                 if (installLocation != null) {
-                    apkMetaBuilder.setInstallLocation(installLocation)
+                    apkMeta = apkMeta.copy(installLocation = installLocation)
                 }
-                apkMetaBuilder.setCompileSdkVersion(attributes.getString("compileSdkVersion"))
-                apkMetaBuilder.setCompileSdkVersionCodename(attributes.getString("compileSdkVersionCodename"))
-                apkMetaBuilder.setPlatformBuildVersionCode(attributes.getString("platformBuildVersionCode"))
-                apkMetaBuilder.setPlatformBuildVersionName(attributes.getString("platformBuildVersionName"))
+                apkMeta = apkMeta.copy(compileSdkVersion = attributes.getString("compileSdkVersion"))
+                apkMeta = apkMeta.copy(compileSdkVersionCodename = attributes.getString("compileSdkVersionCodename"))
+                apkMeta = apkMeta.copy(platformBuildVersionCode = attributes.getString("platformBuildVersionCode"))
+                apkMeta = apkMeta.copy(platformBuildVersionName = attributes.getString("platformBuildVersionName"))
             }
 
             "uses-sdk" -> {
                 val minSdkVersion = attributes.getString("minSdkVersion")
                 if (minSdkVersion != null) {
-                    apkMetaBuilder.setMinSdkVersion(minSdkVersion)
+                    apkMeta = apkMeta.copy(minSdkVersion = minSdkVersion)
                 }
                 val targetSdkVersion = attributes.getString("targetSdkVersion")
                 if (targetSdkVersion != null) {
-                    apkMetaBuilder.setTargetSdkVersion(targetSdkVersion)
+                    apkMeta = apkMeta.copy(targetSdkVersion = targetSdkVersion)
                 }
                 val maxSdkVersion = attributes.getString("maxSdkVersion")
                 if (maxSdkVersion != null) {
-                    apkMetaBuilder.setMaxSdkVersion(maxSdkVersion)
+                    apkMeta = apkMeta.copy(maxSdkVersion = maxSdkVersion)
                 }
             }
 
             "supports-screens" -> {
-                apkMetaBuilder.setAnyDensity(attributes.getBoolean("anyDensity", false))
-                apkMetaBuilder.setSmallScreens(attributes.getBoolean("smallScreens", false))
-                apkMetaBuilder.setNormalScreens(attributes.getBoolean("normalScreens", false))
-                apkMetaBuilder.setLargeScreens(attributes.getBoolean("largeScreens", false))
+                apkMeta = apkMeta.copy(isAnyDensity = attributes.getBoolean("anyDensity", false))
+                apkMeta = apkMeta.copy(isSmallScreens = attributes.getBoolean("smallScreens", false))
+                apkMeta = apkMeta.copy(isNormalScreens = attributes.getBoolean("normalScreens", false))
+                apkMeta = apkMeta.copy(isLargeScreens = attributes.getBoolean("largeScreens", false))
             }
 
             "uses-feature" -> {
@@ -157,18 +158,18 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                 val required = attributes.getBoolean("required", false)
                 if (name != null) {
                     val useFeature = UseFeature(name, required)
-                    apkMetaBuilder.addUsesFeature(useFeature)
+                    apkMeta.usesFeatures.add(useFeature)
                 } else {
                     val gl = attributes.getInt("glEsVersion")
                     if (gl != null) {
                         val v: Int = gl
                         val glEsVersion = GlEsVersion(v shr 16, v and 0xffff, required)
-                        apkMetaBuilder.setGlEsVersion(glEsVersion)
+                        apkMeta = apkMeta.copy(glEsVersion = glEsVersion)
                     }
                 }
             }
 
-            "uses-permission" -> apkMetaBuilder.addUsesPermission(attributes.getString("name"))
+            "uses-permission" -> apkMeta.usesPermissions.add(attributes.getString("name"))
             "permission" -> {
                 val permission = Permission(
                     attributes.getString("name"),
@@ -178,7 +179,7 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                     attributes.getString("group"),
                     attributes.getString("android:protectionLevel")
                 )
-                apkMetaBuilder.addPermissions(permission)
+                apkMeta.permissions.add(permission)
             }
         }
         tagStack[depth++] = xmlNodeStartTag.name
@@ -191,8 +192,6 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
     override fun onCData(xmlCData: XmlCData) {}
     override fun onNamespaceStart(tag: XmlNamespaceStartTag) {}
     override fun onNamespaceEnd(tag: XmlNamespaceEndTag) {}
-    val apkMeta: ApkMeta
-        get() = apkMetaBuilder.build()
 
     private fun matchTagPath(vararg tags: String): Boolean {
         // the root should always be "manifest"

@@ -397,7 +397,6 @@ object Asn1BerParser {
         }
     }
 
-    @Throws(Asn1DecodingException::class)
     private fun getAnnotatedFields(containerClass: Class<*>): List<AnnotatedField> {
         val declaredFields = containerClass.declaredFields
         val result: MutableList<AnnotatedField> = ArrayList(declaredFields.size)
@@ -409,8 +408,7 @@ object Asn1BerParser {
                             + containerClass.name + "." + field.name
                 )
             }
-            val annotatedField: AnnotatedField
-            annotatedField = try {
+            val annotatedField: AnnotatedField = try {
                 AnnotatedField(field, annotation)
             } catch (e: Asn1DecodingException) {
                 throw Asn1DecodingException(
@@ -425,14 +423,13 @@ object Asn1BerParser {
     }
 
     private class AnnotatedField(val field: Field, val annotation: Asn1Field) {
-        private val dataType: Asn1Type
+        private val dataType: Asn1Type = annotation.type
         val berTagClass: Int
         val berTagNumber: Int
         private val tagging: Asn1Tagging
         val isOptional: Boolean
 
         init {
-            dataType = annotation.type
             var tagClass: Asn1TagClass = annotation.cls
             if (tagClass === Asn1TagClass.Automatic) {
                 tagClass = if (annotation.tagNumber != -1) {
@@ -454,7 +451,7 @@ object Asn1BerParser {
             tagging = annotation.tagging
             if (tagging === Asn1Tagging.Explicit || tagging === Asn1Tagging.Implicit && annotation.tagNumber == -1) {
                 throw Asn1DecodingException(
-                    "Tag number must be specified when tagging mode is " + tagging
+                    "Tag number must be specified when tagging mode is $tagging"
                 )
             }
             isOptional = annotation.optional

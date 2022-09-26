@@ -19,11 +19,10 @@ import java.util.zip.ZipFile
  * @author dongliu
  */
 class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
-    private val zf: ZipFile
 
-    init {
-        // create zip file cost time, use one zip file for apk parser life cycle
-        zf = ZipFile(apkFile)
+    private val zf by lazy {
+        ZipFile(apkFile)
+//            .also { println(it.name) }
     }
 
     constructor(filePath: String) : this(File(filePath))
@@ -65,7 +64,7 @@ class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
      */
     @Deprecated("using google official ApkVerifier of apksig lib instead.")
     @Throws(IOException::class)
-    override fun verifyApk(): ApkSignStatus {
+    fun verifyApk(): ApkSignStatus {
         zf.getEntry("META-INF/MANIFEST.MF")
             ?: // apk is not signed;
             return ApkSignStatus.NotSigned
@@ -92,8 +91,12 @@ class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
         return ApkSignStatus.Signed
     }
 
-    @Throws(IOException::class)
+
     override fun close() {
-        Closeable { super@ApkFile.close() }.use { }
+        try {
+            Closeable { super@ApkFile.close() }.use { }
+        } catch (e:Exception) {
+            println(e)
+        }
     }
 }

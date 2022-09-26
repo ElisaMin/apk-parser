@@ -18,7 +18,7 @@ object ResourceLoader {
             toReader("/r_values.ini").use { reader ->
                 val map: MutableMap<Int, String> = HashMap()
                 var line: String
-                while (reader.readLine().also { line = it } != null) {
+                while (reader?.readLine().also { line = it?:"" } != null) {
                     val items =
                         line.trim { it <= ' ' }.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                     if (items.size != 2) {
@@ -40,7 +40,7 @@ object ResourceLoader {
         try {
             toReader("/r_styles.ini").use { reader ->
                 var line: String
-                while (reader.readLine().also { line = it } != null) {
+                while (reader?.readLine().also { line = it?:"" } != null) {
                     line = line.trim { it <= ' ' }
                     val items = line.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                     if (items.size != 2) {
@@ -57,11 +57,8 @@ object ResourceLoader {
         return map
     }
 
-    private fun toReader(path: String): BufferedReader {
-        return BufferedReader(
-            InputStreamReader(
-                ResourceLoader::class.java.getResourceAsStream(path)
-            )
-        )
-    }
+    private fun toReader(path: String): BufferedReader? = ResourceLoader::class
+        .java
+        .getResourceAsStream(path)
+        ?.bufferedReader()
 }

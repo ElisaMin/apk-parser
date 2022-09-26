@@ -4,6 +4,8 @@ import net.dongliu.apk.parser.bean.ApkMeta;
 import net.dongliu.apk.parser.bean.ApkSigner;
 import net.dongliu.apk.parser.bean.CertificateMeta;
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.util.List;
@@ -16,8 +18,10 @@ public class ApkFileTest {
 
     @Test
     public void testParserMeta() throws IOException {
-        String path = getClass().getClassLoader().getResource("apks/Twitter_v7.93.2.apk").getPath();
+        String path = Objects.requireNonNull(getClass().getClassLoader().getResource("apks/Twitter_v7.93.2.apk")).getPath();
+        assert  new File(path).exists();
         try (ApkFile apkFile = new ApkFile(path)) {
+            apkFile.close();
             apkFile.setPreferredLocale(Locale.ENGLISH);
             ApkMeta apkMeta = apkFile.getApkMeta();
             assertEquals("Twitter", apkMeta.getLabel());
@@ -26,7 +30,7 @@ public class ApkFileTest {
 
     @Test
     public void testParserMeta_Type_0204() throws IOException {
-        String path = getClass().getClassLoader().getResource("apks/NetworkStack_210000000.apk").getPath();
+        String path = Objects.requireNonNull(getClass().getClassLoader().getResource("apks/NetworkStack_210000000.apk")).getPath();
         try (ApkFile apkFile = new ApkFile(path)) {
             apkFile.setPreferredLocale(Locale.ENGLISH);
             ApkMeta apkMeta = apkFile.getApkMeta();

@@ -187,6 +187,7 @@ object Asn1BerParser {
 
     @Throws(Asn1DecodingException::class)
     private fun <T : Any> parseSequence(container: BerDataValue, containerClass: Class<T>): T {
+        // FIXME: something wrongs
         val fields = getAnnotatedFields(containerClass)
         Collections.sort(
             fields, Comparator.comparingInt { f: AnnotatedField -> f.annotation.index }
@@ -206,8 +207,7 @@ object Asn1BerParser {
             }
         }
         // Instantiate the container object / result
-        val t: T
-        t = try {
+        val t = try {
             containerClass.getConstructor().newInstance()
         } catch (e: IllegalArgumentException) {
             throw Asn1DecodingException("Failed to instantiate " + containerClass.name, e)
@@ -408,6 +408,7 @@ object Asn1BerParser {
                             + containerClass.name + "." + field.name
                 )
             }
+            // FIXME:
             val annotatedField: AnnotatedField = try {
                 AnnotatedField(field, annotation)
             } catch (e: Asn1DecodingException) {
@@ -439,21 +440,21 @@ object Asn1BerParser {
                 }
             }
             berTagClass = BerEncoding.getTagClass(tagClass)
-            val tagNumber: Int
-            if (annotation.tagNumber != -1) {
-                tagNumber = annotation.tagNumber
-            } else if (dataType === Asn1Type.Choice || dataType === Asn1Type.Any) {
-                tagNumber = -1
-            } else {
-                tagNumber = BerEncoding.getTagNumber(dataType)
+            val tagNumber = when {
+                annotation.tagNumber != -1 -> annotation.tagNumber
+                dataType === Asn1Type.Choice || dataType === Asn1Type.Any -> -1
+                else -> BerEncoding.getTagNumber(dataType)
             }
             berTagNumber = tagNumber
             tagging = annotation.tagging
-            if (tagging === Asn1Tagging.Explicit || tagging === Asn1Tagging.Implicit && annotation.tagNumber == -1) {
-                throw Asn1DecodingException(
-                    "Tag number must be specified when tagging mode is $tagging"
-                )
-            }
+            println(tagNumber)
+            println(tagging)
+            if (((tagging === Asn1Tagging.Explicit) || (tagging === Asn1Tagging.Implicit))
+                    && (annotation.tagNumber == -1)
+            )  throw Asn1DecodingException(
+                "Tag number must be specified when tagging mode is $tagging"
+            )
+
             isOptional = annotation.optional
         }
 

@@ -23,9 +23,9 @@ class ByteArrayApkFile(private var apkData: ByteArray?) : AbstractApkFile(), Clo
             val list: MutableList<CertificateFile> = ArrayList()
             ByteArrayInputStream(apkData).use { `in` ->
                 ZipInputStream(`in`).use { zis ->
-                    var entry: ZipEntry
+                    var entry: ZipEntry?
                     while (zis.nextEntry.also { entry = it } != null) {
-                        val name = entry.name
+                        val name = entry!!.name
                         if (name.uppercase(Locale.getDefault()).endsWith(".RSA") || name.uppercase(Locale.getDefault())
                                 .endsWith(".DSA")
                         ) {
@@ -41,9 +41,9 @@ class ByteArrayApkFile(private var apkData: ByteArray?) : AbstractApkFile(), Clo
     override fun getFileData(path: String): ByteArray? {
         ByteArrayInputStream(apkData).use { `in` ->
             ZipInputStream(`in`).use { zis ->
-                var entry: ZipEntry
+                var entry: ZipEntry?
                 while (zis.nextEntry.also { entry = it } != null) {
-                    if (path == entry.name) {
+                    if (path == entry!!.name) {
                         return readAll(zis)
                     }
                 }
@@ -55,11 +55,6 @@ class ByteArrayApkFile(private var apkData: ByteArray?) : AbstractApkFile(), Clo
     override fun fileData(): ByteBuffer {
         return ByteBuffer.wrap(apkData).asReadOnlyBuffer()
     }
-
-//    @Deprecated("")
-//    override fun verifyApk(): ApkSignStatus {
-//        throw UnsupportedOperationException()
-//    }
 
     @Throws(IOException::class)
     override fun close() {

@@ -218,14 +218,11 @@ object Asn1BerParser {
         var nextUnreadFieldIndex = 0
         val elementsReader = container.contentsReader()
         while (nextUnreadFieldIndex < fields.size) {
-            val dataValue: BerDataValue? = try {
+            val dataValue: BerDataValue = try {
                 elementsReader.readDataValue()
             } catch (e: BerDataValueFormatException) {
                 throw Asn1DecodingException("Malformed data value", e)
-            }
-            if (dataValue == null) {
-                break
-            }
+            } ?: break
             for (i in nextUnreadFieldIndex until fields.size) {
                 val field = fields[i]
                 try {
@@ -243,7 +240,8 @@ object Asn1BerParser {
                     } else {
                         // Mandatory field -- if we can't set its value from this data value, then
                         // it's an error
-                        field.setValueFrom(dataValue, t)
+                        TODO("set value")
+//                        field.setValueFrom(dataValue, t)
                         nextUnreadFieldIndex = i + 1
                         break
                     }
@@ -408,7 +406,6 @@ object Asn1BerParser {
                             + containerClass.name + "." + field.name
                 )
             }
-            // FIXME:
             val annotatedField: AnnotatedField = try {
                 AnnotatedField(field, annotation)
             } catch (e: Asn1DecodingException) {

@@ -32,7 +32,7 @@ object Main {
 }
 fun displayIcon(apkFile: ApkFile) {
 
-    apkFile.allIcons.forEach {
+    apkFile.icons.forEach {
         print(it::class.simpleName)
         print(it.path)
         println(it.density)
@@ -44,7 +44,7 @@ fun displayIcon(apkFile: ApkFile) {
     }
     JFrame().apply {
         JPanel().apply {
-            apkFile.allIcons.asSequence().filterIsInstance<AndroidIcons.Raster>().map {
+            apkFile.icons.asSequence().filterIsInstance<AndroidIcons.Raster>().map {
                 it
                     .toImage()
                     ?.let(::ImageIcon)

@@ -1,11 +1,9 @@
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm")
 }
 
 group = "net.dongliu.apk.parser"
 version = "1.0-SNAPSHOT"
-
-
 
 repositories {
     mavenCentral()

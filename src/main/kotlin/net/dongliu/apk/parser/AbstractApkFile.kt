@@ -136,7 +136,9 @@ abstract class AbstractApkFile:Closeable {
      *
      * @return icon files.
      */
-    val allIcons: List<AndroidIcons<*>> by lazy {
+    @Deprecated("remove on next version", ReplaceWith("icons"))
+    val allIcons:List<AndroidIcons<*>> get() = TODO()
+    val icons: List<AndroidIcons<*>> by lazy {
         xmlTranslator
         iconPaths.mapNotNull { path ->
             path.path?.let {

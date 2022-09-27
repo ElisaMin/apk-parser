@@ -37,7 +37,7 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
     /**
      * default locale.
      */
-    private var locale = Locales.any
+    var locale = Locales.any
 
     /**
      * Parse binary xml.
@@ -267,16 +267,6 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
             ChunkType.NULL -> NullHeader(chunkType, headerSize, chunkSize)
             else -> throw ParserException("Unexpected chunk type:$chunkType")
         }
-    }
-
-    fun setLocale(locale: Locale) {
-        if (locale != null) {
-            this.locale = locale
-        }
-    }
-
-    fun getLocale(): Locale {
-        return locale
     }
 
     companion object {

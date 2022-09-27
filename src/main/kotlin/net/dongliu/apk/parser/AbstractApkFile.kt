@@ -1,6 +1,8 @@
 package net.dongliu.apk.parser
 
 import net.dongliu.apk.parser.bean.*
+import net.dongliu.apk.parser.bean.AndroidIcons.Raster
+import net.dongliu.apk.parser.bean.AndroidIcons.Adaptive
 import net.dongliu.apk.parser.exception.ParserException
 import net.dongliu.apk.parser.parser.*
 import net.dongliu.apk.parser.parser.CertificateMetas.from
@@ -19,7 +21,9 @@ import kotlin.collections.ArrayList
 
 
 internal typealias CertificateFile = Pair<String,ByteArray>
+
 internal inline val CertificateFile.path get() = first
+
 internal inline val CertificateFile.data get() = second
 
 
@@ -31,22 +35,27 @@ internal inline val CertificateFile.data get() = second
  */
 abstract class AbstractApkFile:Closeable {
 
+    /**
+     * All certificate data
+     */
+
     protected abstract val allCertificateData: List<CertificateFile>
 
-    val manifestXml: String get()  = xmlOrrThrows.xml
-    val apkMeta: ApkMeta get() {
-        xmlTranslator
-        return apkTranslator!!.apkMeta
-    }
-    var locales: Set<Locale> = emptySet()
-        private set
-    var preferredLocale: Locale = Locale.getDefault()
-        set(value) {
-            if (preferredLocale != value) {
-                field = value
-                xmlTranslator = null
-            }
-        }
+    /**
+     * read file in apk into bytes
+     */
+    abstract fun getFileData(path: String): ByteArray?
+
+    /**
+     * find data
+     */
+    abstract fun fileData(): ByteBuffer
+
+    /**
+     * xml translator
+     *
+     * set null to mark getter not ready
+     */
     private var xmlTranslator: XmlTranslator? = null
         get() = field ?: genXmlTranslator().also {
             field = it
@@ -57,6 +66,13 @@ abstract class AbstractApkFile:Closeable {
             }
             apkTranslator = null
         }
+    private inline val xmlOrrThrows get() = xmlTranslator?:throw IOException("xml is null")
+
+    /**
+     * Resource table
+     *
+     * set null to mark getter not ready
+     */
     private var resourceTable: ResourceTable? = null
         get() {
             if (field != null) {
@@ -73,14 +89,90 @@ abstract class AbstractApkFile:Closeable {
             return field?:ResourceTable(null)
         }
 
-
+    /**
+     * apk translator
+     *
+     * set null to mark getter not ready
+     */
     private var apkTranslator:ApkMetaTranslator? = null
         get() {
             if (field == null) xmlTranslator
             return field
         }
-    private val xmlOrrThrows get() = xmlTranslator?:throw IOException("xml is null")
 
+    /**
+     * Icon paths
+     */
+    private inline val iconPaths: List<IconPath>
+        get() = apkTranslator!!.iconPaths
+
+    /**
+     * returns decoded manifest as String from xml
+     */
+    val manifestXml: String get()  = xmlOrrThrows.xml
+
+    var locales: Set<Locale> = emptySet()
+        private set
+    var preferredLocale: Locale = Locale.getDefault()
+        set(value) {
+            if (preferredLocale != value) {
+                field = value
+                xmlTranslator = null
+            }
+        }
+
+    /**
+     * returns parsed apk meta info
+     */
+    val apkMeta: ApkMeta get() {
+        xmlTranslator
+        return apkTranslator!!.apkMeta
+    }
+
+
+    /**
+     * This method return icons specified in android manifest file, application.
+     * The icons could be file icon, color icon, or adaptive icon, etc.
+     *
+     * @return icon files.
+     */
+    val allIcons: List<AndroidIcons<*>> by lazy {
+        xmlTranslator
+        iconPaths.mapNotNull { path ->
+            path.path?.let {
+                packagingIcon(it, path.density)
+            }
+        }
+    }
+
+
+
+    /**
+     * return a parsed IconFace from [filePath]
+     */
+    private fun packagingIcon(filePath: String, density: Int, skip: Boolean =false): AndroidIcons<out Any> = getFileData(filePath).let { data ->
+        if (!skip && filePath.endsWith(".xml") && data!=null) {
+            resourceTable
+            return AdaptiveIconParser().also {
+                transBinaryXml(data,it)
+            }.let {
+                packagingIcon(it,filePath)
+            }
+        } else  Raster(filePath, density, getFileData(filePath)?: ByteArray(0))
+    }
+    private fun packagingIcon(iconParser: AdaptiveIconParser,filePath:String,): Adaptive {
+        //FIXME: if its png....
+        return  Adaptive(
+            path = filePath,
+            data = iconParser.foreground?.let(::packagingIcon) to iconParser.background?.let(::packagingIcon)
+        )
+    }
+    private fun packagingIcon(path: String): AndroidIcons.Vector?
+        = transBinaryXml(path)?.let { AndroidIcons.Vector(path = path, data = it) }
+
+    /**
+     * return a apk meta xml translator for update [xmlTranslator]
+     */
     private fun genXmlTranslator():XmlTranslator {
         val translator = XmlTranslator()
         apkTranslator = ApkMetaTranslator(resourceTable!!, preferredLocale)
@@ -108,12 +200,6 @@ abstract class AbstractApkFile:Closeable {
             }
         }
     }
-    /**
-     * read file in apk into bytes
-     */
-    @Throws(IOException::class)
-    abstract fun getFileData(path: String): ByteArray?
-    abstract fun fileData(): ByteBuffer
 
     /**
      * trans binary xml file to text xml file.
@@ -129,13 +215,13 @@ abstract class AbstractApkFile:Closeable {
         this.transBinaryXml(data, xmlTranslator)
         return xmlTranslator.xml
     }
-    private fun transBinaryXml(data: ByteArray, xmlStreamer: XmlStreamer) {
+    private fun transBinaryXml(data: ByteArray, xmlStreamer: XmlStreamer){
         resourceTable
         val buffer = ByteBuffer.wrap(data)
-        val binaryXmlParser = BinaryXmlParser(buffer, resourceTable!!)
-        binaryXmlParser.setLocale(preferredLocale)
-        binaryXmlParser.xmlStreamer = xmlStreamer
-        binaryXmlParser.parse()
+        BinaryXmlParser(buffer, resourceTable!!).apply {
+            this.xmlStreamer = xmlStreamer
+            this.locale = preferredLocale
+        }.parse()
     }// adaptive icon?
     /**
      * Create ApkSignBlockParser for this apk file.
@@ -188,55 +274,6 @@ abstract class AbstractApkFile:Closeable {
     }
     companion object {
     }
-    val iconPaths: List<IconPath?>
-        get() = apkTranslator!!.iconPaths
-    /**
-     * This method return icons specified in android manifest file, application.
-     * The icons could be file icon, color icon, or adaptive icon, etc.
-     *
-     * @return icon files.
-     */
-    val allIcons: List<IconFace>
-        get() {
-            xmlTranslator
-            val iconPaths = iconPaths
-            if (iconPaths.isEmpty()) {
-                return emptyList()
-            }
-            val iconFaces: MutableList<IconFace> = ArrayList(iconPaths.size)
-            for (iconPath in iconPaths) {
-                val filePath = iconPath!!.path
-                if (filePath != null && filePath.endsWith(".xml")) {
-                    // adaptive icon?
-                    val data = getFileData(filePath) ?: continue
-                    resourceTable
-                    val iconParser = AdaptiveIconParser()
-                    this.transBinaryXml(data, iconParser)
-                    var backgroundIcon: Icon? = null
-                    val background = iconParser.background
-                    if (background != null) {
-                        backgroundIcon = newFileIcon(background, iconPath.density)
-                    }
-                    var foregroundIcon: Icon? = null
-                    val foreground = iconParser.foreground
-                    if (foreground != null) {
-                        foregroundIcon = newFileIcon(foreground, iconPath.density)
-                    }
-                    val icon = AdaptiveIcon(foregroundIcon, backgroundIcon)
-                    iconFaces.add(icon)
-                } else {
-                    val icon = newFileIcon(filePath!!, iconPath.density)
-                    iconFaces.add(icon)
-                }
-            }
-            return iconFaces
-        }
-
-    @Throws(IOException::class)
-    private fun newFileIcon(filePath: String, density: Int): Icon {
-        return Icon(filePath, density, getFileData(filePath))
-    }
-
     private fun mergeDexClasses(first: Array<DexClass?>, second: Array<DexClass?>): Array<DexClass?> {
         val result = arrayOfNulls<DexClass>(first.size + second.size)
         System.arraycopy(first, 0, result, 0, first.size)
@@ -301,131 +338,3 @@ abstract class AbstractApkFile:Closeable {
         apkV2Signers = list
     }
 }
-
-//abstract class AbstractApkFileOld : Closeable {
-//    private var dexClasses: Array<DexClass?> = emptyArray()
-//    private var resourceTableParsed = false
-//    private var resourceTable: ResourceTable? = ResourceTable(null)
-//        get()  {
-//            if (resourceTableParsed) {
-//                return field
-//            }
-//            resourceTableParsed = true
-//            val data = getFileData(AndroidConstants.RESOURCE_FILE)
-//            if (data == null) {
-//                // if no resource entry has been found, we assume it is not needed by this APK
-//                locales = emptySet<Locale>()
-//                return ResourceTable(null)
-//            }
-//            val buffer = ByteBuffer.wrap(data)
-//            val resourceTableParser = ResourceTableParser(buffer)
-//            resourceTableParser.parse()
-//            locales = resourceTableParser.locales
-//            return resourceTableParser.resourceTable
-//        }
-//    var locales: Set<Locale?> = emptySet()
-//        private set
-//
-//    private var manifestParsed = false
-//    val manifestXml: String
-//        get() = xmlTranslator.xml
-//    val apkMeta: ApkMeta
-//        get() {
-//
-//            return apkTranslator.apkMeta
-//        }
-//    val iconPaths: List<IconPath?>
-//        get() = apkTranslator.iconPaths
-//    val apkSingers by lazy {
-//        ArrayList<ApkSigner>().apply {
-//            for (file in allCertificateData) {
-//                val certificateMetas = CertificateParser
-//                    .getInstance(file.data)
-//                    .parse()
-//                println(certificateMetas.size)
-//                add(ApkSigner(file.path, certificateMetas))
-//            }
-//        }
-//    }
-//
-//    private var apkV2Signers: List<ApkV2Signer>? = null
-//
-//    /**
-//     * default use empty locale
-//     */
-//    var preferredLocale: Locale = DEFAULT_LOCALE
-//        set(value) {
-//            if (preferredLocale != value) {
-//                field = value
-//                manifestParsed = false
-//            }
-//        }
-//
-////
-////    /**
-////     * get locales supported from resource file
-////     *
-////     * @return decoded AndroidManifest.xml
-////     */
-////    @Throws(IOException::class)
-////    fun getLocales(): Set<Locale?>? {
-////        parseResourceTable()
-////        return locales
-////    }
-////
-//
-//
-//    @get:Throws(IOException::class)
-//    protected abstract val allCertificateData: List<CertificateFile>
-//
-//    protected class CertificateFile(val path: String, val data: ByteArray)
-//
-//
-//    private var xmlTranslator = XmlTranslator()
-//        get() {
-//            return if (manifestParsed) field else {
-//                val tmp = XmlTranslator()
-//                val xmlStreamer: XmlStreamer = CompositeXmlStreamer(tmp, apkTranslator)
-//                val data = getFileData(AndroidConstants.MANIFEST_FILE)
-//                    ?: throw ParserException("Manifest file not found")
-//                transBinaryXml(data, xmlStreamer)
-//                manifestParsed = true
-//                tmp
-//            }
-//
-//        }
-//
-//
-//    private val apkTranslator:ApkMetaTranslator
-//        get() {
-//            xmlTranslator
-//            return ApkMetaTranslator(resourceTable!!, preferredLocale)
-//        }
-//
-//        @Throws(IOException::class)
-////    private fun parseManifest() {
-////        if (manifestParsed) return
-////        resourceTable
-////        xmlTranslator = XmlTranslator()
-////         ApkMetaTranslator(resourceTable!!, preferredLocale)
-////        val xmlStreamer: XmlStreamer = CompositeXmlStreamer(xmlTranslator, apkTranslator)
-////        val data = getFileData(AndroidConstants.MANIFEST_FILE)
-////            ?: throw ParserException("Manifest file not found")
-////        this.transBinaryXml(data, xmlStreamer)
-////        manifestParsed = true
-////    }
-//
-//    /**
-//     * read file in apk into bytes
-//     */
-//    @Throws(IOException::class)
-//    abstract fun getFileData(path: String): ByteArray?
-//
-//    /**
-//     * return the whole apk file as ByteBuffer
-//     */
-//    @Throws(IOException::class)
-//    protected abstract fun fileData(): ByteBuffer
-//
-//
-//}

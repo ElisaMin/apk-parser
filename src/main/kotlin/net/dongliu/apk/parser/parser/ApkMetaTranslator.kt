@@ -56,32 +56,22 @@ class ApkMetaTranslator(private val resourceTable: ResourceTable, private val lo
                     if (resourceValue is ReferenceResourceValue) {
                         val resourceId = resourceValue.referenceResourceId
                         val resources = resourceTable.getResourcesById(resourceId)
-                        if (resources.isNotEmpty()) {
-                            val icons: MutableList<IconPath> = ArrayList()
-                            var hasDefault = false
-                            for (resource in resources) {
-                                val type = resource.type
-                                val resourceEntry = resource.resourceEntry
-                                val path = resourceEntry.toStringValue(resourceTable, locale)
-                                if (type.density == Densities.DEFAULT) {
-                                    hasDefault = true
-                                    apkMeta = apkMeta.copy(icon = path)
-                                }
-                                val iconPath = IconPath(path, type.density)
-                                icons.add(iconPath)
-                            }
-                            if (!hasDefault) {
-                                apkMeta = apkMeta.copy(icon = icons[0].path)
-                            }
-                            iconPaths = icons
-                        }
-                    } else {
-                        val value = iconAttr.value
-                        if (value != null) {
-                            apkMeta = apkMeta.copy(icon = value)
-                            val iconPath = IconPath(value, Densities.DEFAULT)
-                            iconPaths = listOf(iconPath)
-                        }
+                        var defaultIcon:IconPath? = null
+
+                        iconPaths = resources.takeIf { it.isNotEmpty() }
+
+                            ?.map { resource-> IconPath(
+                                path = resource.resourceEntry.toStringValue(resourceTable, locale) ?: "",
+                                density = resource.type.density
+                            ).also { iconPath -> if (iconPath.density== Densities.DEFAULT) defaultIcon = iconPath }
+
+                            } ?: kotlin.run {
+                                iconAttr.value?.let { defaultIcon = IconPath(it, Densities.DEFAULT) }
+                                defaultIcon?.let(::listOf)
+                            } ?: emptyList()
+
+                        apkMeta = apkMeta.copy(icon = defaultIcon?.path?:iconPaths.getOrNull(0)?.path)
+
                     }
                 }
             }

@@ -1,3 +1,5 @@
+@file:Suppress("NAME_SHADOWING")
+
 package net.dongliu.apk.parser
 
 import net.dongliu.apk.parser.bean.*
@@ -7,6 +9,7 @@ import net.dongliu.apk.parser.exception.ParserException
 import net.dongliu.apk.parser.parser.*
 import net.dongliu.apk.parser.parser.CertificateMetas.from
 import net.dongliu.apk.parser.struct.AndroidConstants
+import net.dongliu.apk.parser.struct.resource.Densities
 import net.dongliu.apk.parser.struct.resource.ResourceTable
 import net.dongliu.apk.parser.struct.signingv2.ApkSigningBlock
 import net.dongliu.apk.parser.struct.zip.EOCD
@@ -140,38 +143,48 @@ abstract class AbstractApkFile:Closeable {
     val allIcons:List<AndroidIcons<*>> get() = TODO()
     val icons: List<AndroidIcons<*>> by lazy {
         xmlTranslator
-        iconPaths.mapNotNull { path ->
-            path.path?.let {
-                packagingIcon(it, path.density)
-            }
+        iconPaths.map { path ->
+            packagingIcon(path.path, path.density)
         }
     }
+
 
 
 
     /**
      * return a parsed IconFace from [filePath]
      */
-    private fun packagingIcon(filePath: String, density: Int, skip: Boolean =false): AndroidIcons<out Any> = getFileData(filePath).let { data ->
-        if (!skip && filePath.endsWith(".xml") && data!=null) {
-            resourceTable
-            return AdaptiveIconParser().also {
-                transBinaryXml(data,it)
-            }.let {
-                packagingIcon(it,filePath)
+    private fun packagingIcon(
+        filePath: String?,density: Int,data: ByteArray? = null,
+    ):AndroidIcons<*> {
+        if (density == Densities.Dynamic && filePath?.first() == '#' )
+            return AndroidIcons.Color(filePath)
+        if (filePath.isNullOrEmpty()) return AndroidIcons.empty
+        val data = data ?: getFileData(filePath)
+            ?: return AndroidIcons.Empty(filePath)
+        resourceTable
+        val xml:String? = filePath.takeIf { it.endsWith("xml") }
+            ?.let(::transBinaryXml)
+        val iconParser = xml?.let {
+            IconParser().apply { transBinaryXml(data,this) }
+        }
+        return when {
+            iconParser?.isAdaptive == true -> {
+                println(iconParser.background)
+                Adaptive(
+                    path = filePath,
+                    data = packagingIcon(iconParser.foreground,-2,) to packagingIcon(iconParser.background,-2)
+                )
             }
-        } else  Raster(filePath, density, getFileData(filePath)?: ByteArray(0))
+            iconParser!=null -> {
+                transBinaryXml(filePath)?.let { data -> AndroidIcons.Vector(filePath,data) }
+                    ?: AndroidIcons.empty
+            }
+            else -> {
+                Raster(filePath,density,data)
+            }
+        }
     }
-    private fun packagingIcon(iconParser: AdaptiveIconParser,filePath:String,): Adaptive {
-        //FIXME: if its png....
-        return  Adaptive(
-            path = filePath,
-            data = iconParser.foreground?.let(::packagingIcon) to iconParser.background?.let(::packagingIcon)
-        )
-    }
-    private fun packagingIcon(path: String): AndroidIcons.Vector?
-        = transBinaryXml(path)?.let { AndroidIcons.Vector(path = path, data = it) }
-
     /**
      * return a apk meta xml translator for update [xmlTranslator]
      */
@@ -217,14 +230,14 @@ abstract class AbstractApkFile:Closeable {
         this.transBinaryXml(data, xmlTranslator)
         return xmlTranslator.xml
     }
-    private fun transBinaryXml(data: ByteArray, xmlStreamer: XmlStreamer){
+    private fun transBinaryXml(data: ByteArray, xmlStreamer: XmlStreamer) {
         resourceTable
         val buffer = ByteBuffer.wrap(data)
         BinaryXmlParser(buffer, resourceTable!!).apply {
             this.xmlStreamer = xmlStreamer
             this.locale = preferredLocale
         }.parse()
-    }// adaptive icon?
+    }
     /**
      * Create ApkSignBlockParser for this apk file.
      *

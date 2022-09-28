@@ -25,6 +25,7 @@ object Main {
                 "manifest" -> println(apkFile.manifestXml)
                 "signer" -> println(apkFile.apkSingers)
                 "icon" -> displayIcon(apkFile)
+                "iconXml"-> apkFile.transBinaryXml("res/3N.xml").let(::println)
                 else -> {}
             }
         }

@@ -143,7 +143,7 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
             val attribute = readAttribute()
             val attributeName = attribute.name
             if (xmlStreamer != null) {
-                var value = attribute.toStringValue(resourceTable, locale)
+                var value: String? = attribute.toStringValue(resourceTable, locale)
                 if (intAttributes.contains(attributeName) && isNumeric(value)) {
                     try {
                         value = getFinalValueAsString(attributeName, value!!)
@@ -187,12 +187,12 @@ class BinaryXmlParser(buffer: ByteBuffer, resourceTable: ResourceTable) {
         val namespaceRef = buffer.int
         val nameRef = buffer.int
         var name = stringPool!![nameRef]
-        if (name!!.isEmpty() && resourceMap != null && nameRef < resourceMap!!.size) {
+        if (name!!.isEmpty() && nameRef < resourceMap.size) {
             // some processed apk file make the string pool value empty, if it is a xmlmap attr.
-            name = resourceMap!![nameRef]
+            name = resourceMap[nameRef]
         }
         var namespace = if (namespaceRef > 0) stringPool!![namespaceRef] else null
-        if (namespace == null || namespace.isEmpty() || "http://schemas.android.com/apk/res/android" == namespace) {
+        if (namespace.isNullOrEmpty() || "http://schemas.android.com/apk/res/android" == namespace) {
             //TODO parse namespaces better
             //workaround for a weird case that there is no namespace found: https://github.com/hsiafan/apk-parser/issues/122
             // Log.d("AppLog", "Got a weird namespace, so setting as empty (namespace isn't supposed to be a URL): " + attribute.getName());

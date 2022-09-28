@@ -136,35 +136,34 @@ object ParseUtils {
 //        ResValue resValue = new ResValue();
         val size = Buffers.readUShort(buffer)
         val res0 = Buffers.readUByte(buffer)
-        val dataType = Buffers.readUByte(buffer)
-        return when (dataType) {
-            ResValue.ResType.INT_DEC -> ResourceValue.Companion.decimal(buffer.int)
-            ResValue.ResType.INT_HEX -> ResourceValue.Companion.hexadecimal(buffer.int)
+        return when (val dataType = Buffers.readUByte(buffer)) {
+            ResValue.ResType.INT_DEC -> ResourceValue.decimal(buffer.int)
+            ResValue.ResType.INT_HEX -> ResourceValue.hexadecimal(buffer.int)
+            ResValue.ResType.FLOAT -> ResourceValue.float(buffer.float)
             ResValue.ResType.STRING -> {
                 val strRef = buffer.int
                 if (strRef >= 0) {
-                    ResourceValue.Companion.string(strRef, stringPool)
+                    ResourceValue.string(strRef, stringPool)
                 } else {
                     null
                 }
             }
-
-            ResValue.ResType.REFERENCE -> ResourceValue.Companion.reference(buffer.int)
-            ResValue.ResType.INT_BOOLEAN -> ResourceValue.Companion.bool(buffer.int)
-            ResValue.ResType.NULL -> ResourceValue.Companion.nullValue()
-            ResValue.ResType.INT_COLOR_RGB8, ResValue.ResType.INT_COLOR_RGB4 -> ResourceValue.Companion.rgb(
+            ResValue.ResType.REFERENCE -> ResourceValue.reference(buffer.int)
+            ResValue.ResType.INT_BOOLEAN -> ResourceValue.bool(buffer.int)
+            ResValue.ResType.NULL -> ResourceValue.nullValue()
+            ResValue.ResType.INT_COLOR_RGB8, ResValue.ResType.INT_COLOR_RGB4 -> ResourceValue.rgb(
                 buffer.int,
                 6
             )
 
-            ResValue.ResType.INT_COLOR_ARGB8, ResValue.ResType.INT_COLOR_ARGB4 -> ResourceValue.Companion.rgb(
+            ResValue.ResType.INT_COLOR_ARGB8, ResValue.ResType.INT_COLOR_ARGB4 -> ResourceValue.rgb(
                 buffer.int,
                 8
             )
 
-            ResValue.ResType.DIMENSION -> ResourceValue.Companion.dimension(buffer.int)
-            ResValue.ResType.FRACTION -> ResourceValue.Companion.fraction(buffer.int)
-            else -> ResourceValue.Companion.raw(buffer.int, dataType)
+            ResValue.ResType.DIMENSION -> ResourceValue.dimension(buffer.int)
+            ResValue.ResType.FRACTION -> ResourceValue.fraction(buffer.int)
+            else -> ResourceValue.raw(buffer.int, dataType)
         }
     }
 

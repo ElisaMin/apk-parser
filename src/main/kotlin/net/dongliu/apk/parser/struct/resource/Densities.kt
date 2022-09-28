@@ -4,6 +4,7 @@ package net.dongliu.apk.parser.struct.resource
  * Screen density values
  */
 object Densities {
+    const val Dynamic = -2
     const val DEFAULT = 0
     const val LOW = 120
     const val MEDIUM = 160

@@ -1,6 +1,9 @@
 package net.dongliu.apk.parser.struct
 
-import net.dongliu.apk.parser.struct.resource.*
+import net.dongliu.apk.parser.struct.resource.Densities
+import net.dongliu.apk.parser.struct.resource.ResourceEntry
+import net.dongliu.apk.parser.struct.resource.ResourceTable
+import net.dongliu.apk.parser.struct.resource.TypeSpec
 import net.dongliu.apk.parser.utils.Locales
 import java.util.*
 
@@ -9,35 +12,40 @@ import java.util.*
  *
  * @author dongliu
  */
-abstract class ResourceValue protected constructor(protected val value: Int) {
+sealed class ResourceValue constructor(internal open val value: Int) {
     /**
      * get value as string.
      */
-    abstract fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String?
-    private class DecimalResourceValue(value: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+    abstract fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String
+
+    private data class DecimalResourceValue(override val value: Int) : ResourceValue(value) {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             return value.toString()
         }
     }
 
     private class HexadecimalResourceValue(value: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             return "0x" + Integer.toHexString(value)
         }
     }
 
     private class BooleanResourceValue(value: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             return (value != 0).toString()
         }
     }
+    private class FloatResourceValue( val float: Float): ResourceValue(0) {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String
+        = float.toString()
+    }
 
     private class StringResourceValue(value: Int, private val stringPool: StringPool?) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             return if (value >= 0) {
-                stringPool!![value]
+                 stringPool!![value] ?: ""
             } else {
-                null
+                ""
             }
         }
 
@@ -46,15 +54,16 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
         }
     }
 
+
     /**
      * ReferenceResource ref one another resources, and may has different value for different resource config(locale, density, etc)
      */
     class ReferenceResourceValue(value: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             val resourceId = referenceResourceId
             // android system styles.
             if (resourceId > AndroidConstants.SYS_STYLE_ID_START && resourceId < AndroidConstants.SYS_STYLE_ID_END) {
-                return "@android:style/" + ResourceTable.Companion.sysStyle.get(resourceId.toInt())
+                return "@android:style/" + ResourceTable.sysStyle[resourceId.toInt()]
             }
             val raw = "resourceId:0x" + java.lang.Long.toHexString(resourceId)
             if (resourceTable == null) {
@@ -81,14 +90,17 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
                     currentDensityLevel = densityLevel
                 }
             }
-            val result: String?
-            result = if (selected == null) {
-                raw
-            } else if (locale == null) {
-                "@" + typeSpec!!.name + "/" + selected.key
-            } else {
-                selected.toStringValue(resourceTable, locale)
-            }
+            val result = when {
+                selected == null -> {
+                    raw
+                }
+                locale == null -> {
+                    "@" + typeSpec!!.name + "/" + selected.key
+                }
+                else -> {
+                    selected.toStringValue(resourceTable, locale)
+                }
+            } ?: ""
             return result
         }
 
@@ -105,7 +117,7 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
     }
 
     private class NullResourceValue private constructor() : ResourceValue(-1) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             return ""
         }
 
@@ -115,8 +127,8 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
     }
 
     private class RGBResourceValue(value: Int, private val len: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
-            val sb = StringBuilder()
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
+            val sb = StringBuilder("#")
             for (i in len / 2 - 1 downTo 0) {
                 sb.append(Integer.toHexString(value shr i * 8 and 0xff))
             }
@@ -125,10 +137,8 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
     }
 
     private class DimensionValue(value: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
-            val unit = (value and 0xff).toShort()
-            val unitStr: String
-            unitStr = when (unit) {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
+            val unitStr: String = when (val unit = (value and 0xff).toShort()) {
                 ResValue.ResDataCOMPLEX.UNIT_MM -> "mm"
                 ResValue.ResDataCOMPLEX.UNIT_PX -> "px"
                 ResValue.ResDataCOMPLEX.UNIT_DIP -> "dp"
@@ -142,11 +152,9 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
     }
 
     private class FractionValue(value: Int) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             // The low-order 4 bits of the data value specify the type of the fraction
-            val type = (value and 0xf).toShort()
-            val pstr: String
-            pstr = when (type) {
+            val pstr: String = when (val type = (value and 0xf).toShort()) {
                 ResValue.ResDataCOMPLEX.UNIT_FRACTION -> "%"
                 ResValue.ResDataCOMPLEX.UNIT_FRACTION_PARENT -> "%p"
                 else -> "unknown type:0x" + Integer.toHexString(type.toInt())
@@ -156,8 +164,8 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
         }
     }
 
-    private class RawValue(value: Int, private val dataType: Short) : ResourceValue(value) {
-        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String? {
+    private data class RawValue(override val value: Int, private val dataType: Short) : ResourceValue(value) {
+        override fun toStringValue(resourceTable: ResourceTable?, locale: Locale?): String {
             return "{" + dataType + ":" + (value.toLong() and 0xFFFFFFFFL) + "}"
         }
     }
@@ -174,6 +182,9 @@ abstract class ResourceValue protected constructor(protected val value: Int) {
         fun bool(value: Int): ResourceValue {
             return BooleanResourceValue(value)
         }
+
+        fun float(float: Float): ResourceValue
+            = FloatResourceValue(float)
 
         fun string(value: Int, stringPool: StringPool?): ResourceValue {
             return StringResourceValue(value, stringPool)

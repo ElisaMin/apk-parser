@@ -9,16 +9,13 @@ import net.dongliu.apk.parser.utils.xml.XmlEscaper
  * @author dongliu
  */
 class XmlTranslator : XmlStreamer {
-    private val sb: StringBuilder
+    private val sb: StringBuilder = StringBuilder()
     private var shift = 0
-    private val namespaces: XmlNamespaces
-    private var isLastStartTag = false
-
     init {
-        sb = StringBuilder()
         sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-        namespaces = XmlNamespaces()
     }
+    private val namespaces: XmlNamespaces  = XmlNamespaces()
+    private var isLastStartTag = false
 
     override fun onStartTag(xmlNodeStartTag: XmlNodeStartTag) {
         if (isLastStartTag) {
@@ -36,9 +33,9 @@ class XmlTranslator : XmlStreamer {
         }
         sb.append(xmlNodeStartTag.name)
         val nps = namespaces.consumeNameSpaces()
-        if (!nps!!.isEmpty()) {
+        if (nps.isNotEmpty()) {
             for (np in nps) {
-                sb.append(" xmlns:").append(np!!.prefix).append("=\"")
+                sb.append(" xmlns:").append(np.prefix).append("=\"")
                     .append(np.uri)
                     .append("\"")
             }
@@ -55,7 +52,7 @@ class XmlTranslator : XmlStreamer {
         if (namespace == null) {
             namespace = attribute.namespace
         }
-        if (!namespace.isEmpty()) {
+        if (namespace.isNotEmpty()) {
             sb.append(namespace).append(':')
         }
         val escapedFinalValue = XmlEscaper.escapeXml10(attribute.value)

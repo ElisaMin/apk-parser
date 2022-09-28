@@ -7,24 +7,31 @@ import net.dongliu.apk.parser.struct.xml.*
  *
  * @author Liu Dong dongliu@live.cn
  */
-class AdaptiveIconParser : XmlStreamer {
+class IconParser : XmlStreamer {
+    var isAdaptive = false
+        private set
     var foreground: String? = null
         private set
     var background: String? = null
         private set
 
+
     override fun onStartTag(xmlNodeStartTag: XmlNodeStartTag) {
-        if ("background" == xmlNodeStartTag.name) {
-            background = getDrawable(xmlNodeStartTag)
-        } else if ("foreground" == xmlNodeStartTag.name) {
-            foreground = getDrawable(xmlNodeStartTag)
+        when (xmlNodeStartTag.name) {
+            "adaptive-icon"-> isAdaptive = true
+            "background" -> {
+                background = getDrawable(xmlNodeStartTag)
+            }
+            "foreground" -> {
+                foreground = getDrawable(xmlNodeStartTag)
+            }
         }
     }
 
     private fun getDrawable(xmlNodeStartTag: XmlNodeStartTag): String? {
         val attributes = xmlNodeStartTag.attributes
         for (attribute in attributes.attributes) {
-            if (attribute!!.name == "drawable") {
+            if (attribute?.name == "drawable") {
                 return attribute.value
             }
         }

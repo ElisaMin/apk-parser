@@ -27,10 +27,10 @@ object ResValue {
          * global value string pool.
          */
         const val STRING: Short = 0x03
-        //        /**
-        //         * The 'data' holds a single-precision floating point number.
-        //         */
-        //        public static final short FLOAT = 0x04;
+        /**
+         * The 'data' holds a single-precision floating point number.
+         */
+        const val FLOAT:Short = 0x04;
         /**
          * The 'data' holds a complex number encoding a dimension value;
          * such as "100in".

@@ -1,5 +1,6 @@
 package net.dongliu.apk.parser.bean
 
+import net.dongliu.apk.parser.struct.resource.Densities
 import java.awt.image.BufferedImage
 import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
@@ -33,6 +34,29 @@ sealed interface AndroidIcons<T:Any> : Serializable {
      */
     val path: String
 
+    class Empty(override val path:String = "") : AndroidIcons<Unit> {
+
+//        init {
+//            if (path.isEmpty() )
+//                require(this === empty)
+//        }
+
+        override val density: Int = -255
+        override val data = Unit
+    }
+
+
+    /**
+     * The plain icon, using color drawable resource.
+     */
+    class Color(override val data: String) : AndroidIcons<String>, Serializable {
+        override val density: Int get() = Densities.NONE
+        override val path: String = ""
+
+        companion object {
+            private const val serialVersionUID = -7913024425268466186L
+        }
+    }
 
     /**
      * Vector data Icon , its drawable
@@ -52,17 +76,16 @@ sealed interface AndroidIcons<T:Any> : Serializable {
      */
     data class Adaptive(
         override val path:String,
-        override val data: Pair<Vector?, Vector?>
-    ) : AndroidIcons<Pair<Vector?,Vector?>>, Serializable {
-
+        override val data: Pair<AndroidIcons<*>, AndroidIcons<*>>
+    ) : AndroidIcons<Pair<AndroidIcons<*>, AndroidIcons<*>>>, Serializable {
         /**
          * The foreground icon
          */
-        val foreground: Vector? get() = data.first
+        val foreground: AndroidIcons<*> get() = data.first
         /**
          * The background icon
          */
-        val background: Vector? get() = data.second
+        val background: AndroidIcons<*> get() = data.second
 
         override val density: Int = 0
 
@@ -100,23 +123,8 @@ sealed interface AndroidIcons<T:Any> : Serializable {
         }
     }
 
-//    /**
-//     * The plain icon, using color drawable resource.
-//     */
-//    class ColorIcon : AndroidIcons<String>, Serializable {
-//        override val density: Int
-//            get() = throw UnsupportedOperationException()
-//        override val data: String
-//            get() {
-//                throw UnsupportedOperationException()
-//            }
-//        override val path: String
-//            get() {
-//                throw UnsupportedOperationException()
-//            }
-//
-//        companion object {
-//            private const val serialVersionUID = -7913024425268466186L
-//        }
-//    }
+    companion object {
+        val empty = Empty()
+    }
+
 }

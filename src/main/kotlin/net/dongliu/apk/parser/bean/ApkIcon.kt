@@ -48,7 +48,7 @@ sealed interface ApkIcon<T:Any> : Serializable {
      */
     data class Color internal constructor(override val data: String) : ApkIcon<String>, Serializable {
         override val density: Int get() = Densities.NONE
-        override val path: String = ""
+        override val path: String get() = data
 
         companion object {
             private const val serialVersionUID = -7913024425268466186L

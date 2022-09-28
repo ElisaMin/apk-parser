@@ -1,4 +1,6 @@
 # Re-Revived ApkParser
+[![](https://jitpack.io/v/ElisaMin/apk-parser.svg)](https://jitpack.io/#ElisaMin/apk-parser)
+
 
 apk parser for kotlin/compose-jb, forked from **[here](https://github.com/AndroidDeveloperLB/apk-parser)** after converted to kotlin and re-support jvm and *Compose-JB (jvm)*
 > you can open issue if you want me to adapt kmm android version ~~(im so laaaaaaaaaaazy)~~

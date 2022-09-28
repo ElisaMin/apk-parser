@@ -3,8 +3,8 @@
 package net.dongliu.apk.parser
 
 import net.dongliu.apk.parser.bean.*
-import net.dongliu.apk.parser.bean.AndroidIcons.Raster
-import net.dongliu.apk.parser.bean.AndroidIcons.Adaptive
+import net.dongliu.apk.parser.bean.ApkIcon.Raster
+import net.dongliu.apk.parser.bean.ApkIcon.Adaptive
 import net.dongliu.apk.parser.exception.ParserException
 import net.dongliu.apk.parser.parser.*
 import net.dongliu.apk.parser.parser.CertificateMetas.from
@@ -139,9 +139,7 @@ abstract class AbstractApkFile:Closeable {
      *
      * @return icon files.
      */
-    @Deprecated("remove on next version", ReplaceWith("icons"))
-    val allIcons:List<AndroidIcons<*>> get() = TODO()
-    val icons: List<AndroidIcons<*>> by lazy {
+    val icons: List<ApkIcon<*>> by lazy {
         xmlTranslator
         iconPaths.map { path ->
             packagingIcon(path.path, path.density)
@@ -156,12 +154,12 @@ abstract class AbstractApkFile:Closeable {
      */
     private fun packagingIcon(
         filePath: String?,density: Int,data: ByteArray? = null,
-    ):AndroidIcons<*> {
+    ):ApkIcon<*> {
         if (density == Densities.Dynamic && filePath?.first() == '#' )
-            return AndroidIcons.Color(filePath)
-        if (filePath.isNullOrEmpty()) return AndroidIcons.empty
+            return ApkIcon.Color(filePath)
+        if (filePath.isNullOrEmpty()) return ApkIcon.empty
         val data = data ?: getFileData(filePath)
-            ?: return AndroidIcons.Empty(filePath)
+            ?: return ApkIcon.Empty(filePath)
         resourceTable
         val xml:String? = filePath.takeIf { it.endsWith("xml") }
             ?.let(::transBinaryXml)
@@ -170,15 +168,14 @@ abstract class AbstractApkFile:Closeable {
         }
         return when {
             iconParser?.isAdaptive == true -> {
-                println(iconParser.background)
                 Adaptive(
                     path = filePath,
                     data = packagingIcon(iconParser.foreground,-2,) to packagingIcon(iconParser.background,-2)
                 )
             }
             iconParser!=null -> {
-                transBinaryXml(filePath)?.let { data -> AndroidIcons.Vector(filePath,data) }
-                    ?: AndroidIcons.empty
+                transBinaryXml(filePath)?.let { data -> ApkIcon.Vector(filePath,data) }
+                    ?: ApkIcon.empty
             }
             else -> {
                 Raster(filePath,density,data)

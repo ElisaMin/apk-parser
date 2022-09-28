@@ -8,7 +8,7 @@ import java.io.Serializable
 import javax.imageio.ImageIO
 
 
-fun AndroidIcons.Raster.toImage(): BufferedImage =
+fun ApkIcon.Raster.toImage(): BufferedImage =
     BufferedInputStream(ByteArrayInputStream(data)).let {
         ImageIO.read(it)
     }
@@ -16,7 +16,7 @@ fun AndroidIcons.Raster.toImage(): BufferedImage =
 /**
  * The icon interface
  */
-sealed interface AndroidIcons<T:Any> : Serializable {
+sealed interface ApkIcon<T:Any> : Serializable {
     /**
      * Return the density this icon for. 0 means default icon.
      * see [net.dongliu.apk.parser.struct.resource.Densities] for more density values.
@@ -34,12 +34,9 @@ sealed interface AndroidIcons<T:Any> : Serializable {
      */
     val path: String
 
-    class Empty(override val path:String = "") : AndroidIcons<Unit> {
+    data class Empty internal constructor (override val path:String)  : ApkIcon<Unit> {
 
-//        init {
-//            if (path.isEmpty() )
-//                require(this === empty)
-//        }
+        internal constructor() : this("")
 
         override val density: Int = -255
         override val data = Unit
@@ -49,7 +46,7 @@ sealed interface AndroidIcons<T:Any> : Serializable {
     /**
      * The plain icon, using color drawable resource.
      */
-    class Color(override val data: String) : AndroidIcons<String>, Serializable {
+    data class Color internal constructor(override val data: String) : ApkIcon<String>, Serializable {
         override val density: Int get() = Densities.NONE
         override val path: String = ""
 
@@ -61,10 +58,10 @@ sealed interface AndroidIcons<T:Any> : Serializable {
     /**
      * Vector data Icon , its drawable
      */
-    data class Vector(
+    data class Vector internal constructor(
         override val path: String,
         override val data: String,
-    ):AndroidIcons<String>,Serializable {
+    ):ApkIcon<String>,Serializable {
         override val density: Int = -2
         companion object {
             private const val serialVersionUID = 4185750290222529320L
@@ -74,18 +71,18 @@ sealed interface AndroidIcons<T:Any> : Serializable {
     /**
      * Android adaptive icon, from android 8.0
      */
-    data class Adaptive(
+    data class Adaptive internal constructor(
         override val path:String,
-        override val data: Pair<AndroidIcons<*>, AndroidIcons<*>>
-    ) : AndroidIcons<Pair<AndroidIcons<*>, AndroidIcons<*>>>, Serializable {
+        override val data: Pair<ApkIcon<*>, ApkIcon<*>>
+    ) : ApkIcon<Pair<ApkIcon<*>, ApkIcon<*>>>, Serializable {
         /**
          * The foreground icon
          */
-        val foreground: AndroidIcons<*> get() = data.first
+        val foreground: ApkIcon<*> get() = data.first
         /**
          * The background icon
          */
-        val background: AndroidIcons<*> get() = data.second
+        val background: ApkIcon<*> get() = data.second
 
         override val density: Int = 0
 
@@ -98,7 +95,7 @@ sealed interface AndroidIcons<T:Any> : Serializable {
      *
      * @author Liu Dong
      */
-    open class Raster(
+    data class Raster internal constructor(
         /**
          * The icon path in apk file
          */
@@ -112,15 +109,30 @@ sealed interface AndroidIcons<T:Any> : Serializable {
          * Icon data may be null, due to some apk missing the icon file.
          */
         override val data: ByteArray
-    ) : AndroidIcons<ByteArray>, Serializable {
-
-        override fun toString(): String {
-            return "Icon{path='$path', density=$density, size=$data}"
-        }
+    ) : ApkIcon<ByteArray>, Serializable {
 
         companion object {
             private const val serialVersionUID = 8680309892249769701L
         }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Raster) return false
+
+            if (path != other.path) return false
+            if (density != other.density) return false
+            if (!data.contentEquals(other.data)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = path.hashCode()
+            result = 31 * result + density
+            result = 31 * result + data.contentHashCode()
+            return result
+        }
+
     }
 
     companion object {

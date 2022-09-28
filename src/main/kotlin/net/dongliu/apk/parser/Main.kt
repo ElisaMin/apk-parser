@@ -1,6 +1,6 @@
 package net.dongliu.apk.parser
 
-import net.dongliu.apk.parser.bean.AndroidIcons
+import net.dongliu.apk.parser.bean.ApkIcon
 import net.dongliu.apk.parser.bean.toImage
 import java.io.IOException
 import java.security.cert.CertificateException
@@ -37,7 +37,7 @@ fun displayIcon(apkFile: ApkFile) {
         print(it::class.simpleName)
         print(it.path)
         println(it.density)
-        if (it is AndroidIcons.Adaptive) {
+        if (it is ApkIcon.Adaptive) {
             println(it.foreground)
             println(it.background)
 
@@ -45,7 +45,7 @@ fun displayIcon(apkFile: ApkFile) {
     }
     JFrame().apply {
         JPanel().apply {
-            apkFile.icons.asSequence().filterIsInstance<AndroidIcons.Raster>().map {
+            apkFile.icons.asSequence().filterIsInstance<ApkIcon.Raster>().map {
                 it
                     .toImage()
                     ?.let(::ImageIcon)

@@ -1,9 +1,19 @@
 # Re-Revived ApkParser
 
-apk parser for kotlin/compose-jb, forked from **[here](https://github.com/AndroidDeveloperLB/apk-parser)** after converted to kotlin and re-support jvm
+apk parser for kotlin/compose-jb, forked from **[here](https://github.com/AndroidDeveloperLB/apk-parser)** after converted to kotlin and re-support jvm and *Compose-JB (jvm)*
+> you can open issue if you want me to adapt kmm android version ~~(im so laaaaaaaaaaazy)~~
 
 I personally use it for my own tools, **[Heizi Flash Tools](https://github.com/ElisaMin/Heizi-Flashing-Tools)**.
 
+# Compose-JB icon support
+```kotlin
+//composable
+val icon = remember { apk.icons.find { it.density == Densities.DEFAULT }!! }
+me.heizi.apk.parser.ktx.Image(icon)
+```
+
+## androind maybe
+````
 # Why use this library, as we can do it using the Android framework instead?
 
 (multiplatform version maybe on processing) 
@@ -16,7 +26,7 @@ While the Android framework is more official and should work better in most case
 4. While the Android framework is technically open sourced, it has various things that are protected and can't be reached, and also hard to import as your own code.
 
 So, what I suggest is to first try to use what Android officially offers, and if it fails, use this library.
-
+````
 # Usage in gradle file
 
 https://jitpack.io/#ElisaMin/apk-parser

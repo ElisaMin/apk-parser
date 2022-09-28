@@ -1,4 +1,4 @@
-package me.heizi.apk.paeser.ktx
+package me.heizi.apk.parser.ktx
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box

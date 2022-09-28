@@ -1,12 +1,12 @@
 import org.jetbrains.compose.compose
 plugins {
+    `maven-publish`
     kotlin("jvm")
     id("org.jetbrains.compose")
 }
 
 
 group = "me.heizi.apk.parser"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()

@@ -1,10 +1,41 @@
+
+import  java.util.Properties
+
+apply("gradle/genLocal.gradle.kts")
+
 plugins {
     kotlin("jvm")
+    `maven-publish`
 }
 
 group = "net.dongliu.apk.parser"
-version = "1.0-SNAPSHOT"
 
+allprojects {
+    version = rootProject.extra["apk-parser.version"] as String
+    apply( plugin = "maven-publish")
+    apply( plugin = "org.jetbrains.kotlin.jvm")
+
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "17"
+    }
+
+    configure<PublishingExtension> {
+        val anotherLocal = Properties().apply {
+            rootProject.file("local.properties").inputStream().use(::load)
+        }["maven_repo_dir"] as String
+        repositories {
+            maven {
+                url = uri(anotherLocal)
+            }
+        }
+        publications {
+            create("toLocal", MavenPublication::class.java){
+                components.forEach(::println)
+                from(components["kotlin"])
+            }
+        }
+    }
+}
 repositories {
     mavenCentral()
 }

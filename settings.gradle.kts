@@ -13,5 +13,5 @@ pluginManagement {
 
 rootProject.name = "apk-parser"
 
-include("compose-desktop")
+include("compose-desktop-ext")
 

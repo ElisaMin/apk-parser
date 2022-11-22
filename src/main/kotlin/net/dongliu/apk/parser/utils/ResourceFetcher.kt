@@ -61,7 +61,7 @@ class ResourceFetcher {
         }
         parser.parse(ByteArrayInputStream(xml.toByteArray(StandardCharsets.UTF_8)), dh)
         for (pair in attrIds) {
-            System.out.printf("%s=%d%n", pair.right, pair.left)
+            System.out.printf("%s=%d%n", pair.second, pair.first)
         }
     }
 

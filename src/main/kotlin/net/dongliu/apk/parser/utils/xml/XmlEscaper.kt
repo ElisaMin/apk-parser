@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package net.dongliu.apk.parser.utils.xml
 
 /**

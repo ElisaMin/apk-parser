@@ -48,18 +48,5 @@ internal class XmlNamespaces {
     /**
      * one namespace
      */
-    class XmlNamespace(val prefix: String?, val uri: String?) {
-        override fun equals(o: Any?): Boolean {
-            if (this === o) return true
-            if (o !is XmlNamespace) return false
-            val that = o
-            return prefix == that.prefix && uri == that.uri
-        }
-
-        override fun hashCode(): Int {
-            var result = if (prefix == null) 0 else prefix.hashCode()
-            result = 31 * result + if (uri == null) 0 else uri.hashCode()
-            return result
-        }
-    }
+    data class XmlNamespace(val prefix: String?, val uri: String?)
 }

@@ -8,10 +8,11 @@ import java.io.Serializable
 import javax.imageio.ImageIO
 
 
-fun ApkIcon.Raster.toImage(): BufferedImage =
+fun ApkIcon.Raster.toImage(): BufferedImage? = kotlin.runCatching {
     BufferedInputStream(ByteArrayInputStream(data)).let {
         ImageIO.read(it)
     }
+}.getOrNull()
 
 /**
  * The icon interface

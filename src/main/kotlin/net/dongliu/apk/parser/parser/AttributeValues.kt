@@ -1,3 +1,5 @@
+@file:Suppress("NAME_SHADOWING")
+
 package net.dongliu.apk.parser.parser
 
 import net.dongliu.apk.parser.utils.Strings.join

@@ -42,7 +42,7 @@ class JSSECertificateParser(data: ByteArray) : CertificateParser(data) {
         )
         for (i in encodedCertificates.indices) {
             val encodedCertificate = encodedCertificates[i]
-            val encodedForm = Buffers.readBytes(encodedCertificate!!.encoded)
+            val encodedForm = Buffers.readBytes(encodedCertificate.encoded)
             val certificate = certFactory.generateCertificate(ByteArrayInputStream(encodedForm))
             result.add(certificate as X509Certificate)
         }

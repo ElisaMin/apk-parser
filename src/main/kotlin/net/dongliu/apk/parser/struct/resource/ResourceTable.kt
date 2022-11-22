@@ -43,7 +43,7 @@ class ResourceTable(val stringPool: StringPool?) {
         // read from type resource
         val result: MutableList<Resource> = ArrayList()
         for (type in types) {
-            val resourceEntry = type!!.getResourceEntry(entryIndex) ?: continue
+            val resourceEntry = type.getResourceEntry(entryIndex) ?: continue
             val currentResourceValue = resourceEntry.value ?: continue
             // cyclic reference detect
             if (currentResourceValue is ReferenceResourceValue) {

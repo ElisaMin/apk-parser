@@ -72,17 +72,17 @@ fun Image(
     }
 }
 
-private fun ApkIcon.Vector.toImageVector(density:Density): ImageVector =
+fun ApkIcon.Vector.toImageVector(density:Density): ImageVector =
     ByteArrayInputStream(data.toByteArray()).use {
         loadXmlImageVector(InputSource(it),density)
     }
 
 
-val emptyBitmapPainter = BitmapPainter(ImageBitmap(0,0))
+private val emptyBitmapPainter = BitmapPainter(ImageBitmap(0,0))
 
 
 @Composable
-private fun rememberApkIconPainter(
+fun rememberApkIconPainter(
     icon: ApkIcon<*>?,
     density: Density = LocalDensity.current
 ):Painter = when(icon) {

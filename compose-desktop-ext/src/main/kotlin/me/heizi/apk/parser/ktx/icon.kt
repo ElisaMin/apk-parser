@@ -89,8 +89,10 @@ private fun rememberApkIconPainter(
     is ApkIcon.Raster -> remember(icon.path,icon.data.toString()) { icon.toImage()!!.toPainter() }
     is ApkIcon.Vector -> rememberVectorPainter(icon.toImageVector(density))
     is ApkIcon.Color -> remember("ApkIconColorPainter",icon.data) {
-         ColorPainter(Color(icon.data.removePrefix("#").toLong(16) or 0x00000000FF000000))
+         ColorPainter(icon.color)
     }
     is ApkIcon.Adaptive-> emptyBitmapPainter
     else-> emptyBitmapPainter
 }
+
+val ApkIcon.Color.color get() = Color(value)

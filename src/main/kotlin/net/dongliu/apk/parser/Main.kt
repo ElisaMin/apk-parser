@@ -12,7 +12,7 @@ import javax.swing.*
  *
  * @author Liu Dong &lt;dongliu@live.cn&gt;
  */
-object Main {
+internal object Main {
     @Throws(IOException::class, CertificateException::class)
     @JvmStatic
     fun main(args: Array<String>) {
@@ -31,7 +31,7 @@ object Main {
         }
     }
 }
-fun displayIcon(apkFile: ApkFile) {
+internal fun displayIcon(apkFile: ApkFile) {
 
     apkFile.icons.forEach {
         print(it::class.simpleName)

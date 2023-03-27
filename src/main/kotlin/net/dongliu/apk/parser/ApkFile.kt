@@ -21,6 +21,9 @@ import java.util.zip.ZipFile
 class ApkFile(private val apkFile: File) : AbstractApkFile(), Closeable {
 
     private val zf by lazy {
+        require(apkFile.exists() && apkFile.isFile) {
+            "apk file not exists: $apkFile"
+        }
         ZipFile(apkFile)
 //            .also { println(it.name) }
     }

@@ -38,9 +38,7 @@ internal fun displayIcon(apkFile: ApkFile) {
         print(it.path)
         println(it.density)
         if (it is ApkIcon.Adaptive) {
-            println(it.foreground)
-            println(it.background)
-
+            println(it)
         }
     }
     JFrame().apply {

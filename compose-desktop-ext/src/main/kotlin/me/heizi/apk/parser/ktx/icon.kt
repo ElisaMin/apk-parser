@@ -39,8 +39,8 @@ fun Image(
     backgroundAlignment: Alignment = Alignment.Center,
     foregroundAlignment: Alignment = Alignment.Center,
 ) {
-    val foreground = rememberApkIconPainter(icon.foreground,density)
-    val background = rememberApkIconPainter(icon.background,density)
+    val foreground = rememberApkIconPainter(icon.data.foreground,density)
+    val background = rememberApkIconPainter(icon.data.background,density)
     Box(modifier,alignment,) {
         Image(background,contentDescription,backgroundModifier,backgroundAlignment,backgroundContentScale,backgroundAlpha,backgroundColorFilter)
         Image(foreground,contentDescription,foregroundModifier,foregroundAlignment,foregroundContentScale,foregroundAlpha,foregroundColorFilter)
@@ -72,11 +72,23 @@ fun Image(
     }
 }
 
-fun ApkIcon.Vector.toImageVector(density:Density): ImageVector =
-    ByteArrayInputStream(data.toByteArray()).use {
-        loadXmlImageVector(InputSource(it),density)
-    }
 
+
+fun ApkIcon.Vector.toImageVector(density:Density) = data.let {
+    it.replace(Regex("""android:fillType="([^"]*)"""") ) {
+        println(it.groupValues.joinToString())
+        val value = runCatching {
+            it.groupValues[1].toInt()
+        }.getOrNull()
+        val fillType = when(value) {
+            0-> "evenOdd"
+            else-> "nonZero"
+        }
+        """android:fillType="$fillType""""
+    }
+}.toByteArray().let(::ByteArrayInputStream).use {
+    loadXmlImageVector(InputSource(it),density)
+}
 
 private val emptyBitmapPainter = BitmapPainter(ImageBitmap(0,0))
 

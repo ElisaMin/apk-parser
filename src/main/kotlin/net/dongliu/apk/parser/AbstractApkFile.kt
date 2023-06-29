@@ -170,7 +170,10 @@ abstract class AbstractApkFile:Closeable {
             iconParser?.isAdaptive == true -> {
                 Adaptive(
                     path = filePath,
-                    data = packagingIcon(iconParser.foreground,-2,) to packagingIcon(iconParser.background,-2)
+                    data = ApkIcon.AdaptiveData(
+                        packagingIcon(iconParser.foreground,-2,),
+                        packagingIcon(iconParser.background,-2)
+                    )
                 )
             }
             iconParser!=null -> {

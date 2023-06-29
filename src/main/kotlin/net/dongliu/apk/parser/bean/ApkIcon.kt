@@ -12,7 +12,7 @@ fun ApkIcon.Raster.toImage(): BufferedImage? = kotlin.runCatching {
     BufferedInputStream(ByteArrayInputStream(data)).let {
         ImageIO.read(it)
     }
-}.getOrNull()
+}.onFailure { exception -> exception.printStackTrace() }.getOrNull()
 
 /**
  * The icon interface
@@ -71,21 +71,37 @@ sealed interface ApkIcon<T:Any> : Serializable {
         }
     }
 
+    @JvmInline
+    value class AdaptiveData internal constructor(val data:Pair<ApkIcon<*>,ApkIcon<*>>):Serializable {
+        companion object {
+            private const val serialVersionUID = 4185750290211529320L
+        }
+        internal constructor(foreground:ApkIcon<*>,background:ApkIcon<*>):this(Pair(foreground,background))
+        val foreground: ApkIcon<*> get() = data.first
+        val background: ApkIcon<*> get() = data.second
+
+        override fun toString(): String {
+            return "AdaptiveData(foreground=${data.first.data},background=${data.second.data})"
+        }
+    }
+
     /**
      * Android adaptive icon, from android 8.0
      */
     data class Adaptive internal constructor(
         override val path:String,
-        override val data: Pair<ApkIcon<*>, ApkIcon<*>>
-    ) : ApkIcon<Pair<ApkIcon<*>, ApkIcon<*>>>, Serializable {
+        override val data: AdaptiveData
+    ) : ApkIcon<AdaptiveData>, Serializable {
         /**
          * The foreground icon
          */
-        val foreground: ApkIcon<*> get() = data.first
+        @Deprecated("Use data.foreground instead", ReplaceWith("data.foreground"))
+        val foreground: ApkIcon<*> get() = data.foreground
         /**
          * The background icon
          */
-        val background: ApkIcon<*> get() = data.second
+        @Deprecated("Use data.background instead", ReplaceWith("data.background"))
+        val background: ApkIcon<*> get() = data.background
 
         override val density: Int = 0
 
@@ -120,22 +136,19 @@ sealed interface ApkIcon<T:Any> : Serializable {
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is Raster) return false
+            if (javaClass != other?.javaClass) return false
+            other as Raster
 
             if (path != other.path) return false
             if (density != other.density) return false
-            if (!data.contentEquals(other.data)) return false
-
-            return true
+            return data.contentEquals(other.data)
         }
-
         override fun hashCode(): Int {
             var result = path.hashCode()
             result = 31 * result + density
             result = 31 * result + data.contentHashCode()
             return result
         }
-
     }
 
     companion object {

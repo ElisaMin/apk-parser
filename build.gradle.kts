@@ -14,12 +14,10 @@ allprojects {
     version = rootProject.extra["apk-parser.version"] as String
     apply( plugin = "maven-publish")
     apply( plugin = "org.jetbrains.kotlin.jvm")
-
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "19"
+    kotlin {
+        jvmToolchain(19)
     }
-
-    configure<PublishingExtension> {
+    publishing {
         val anotherLocal = Properties().apply {
             rootProject.file("local.properties").inputStream().use(::load)
         }["maven_repo_dir"] as String

@@ -49,7 +49,6 @@ internal fun displayIcon(apkFile: ApkFile) {
                     ?.let(::ImageIcon)
                     ?.let(::JLabel)
             }.filterNotNull().forEach(::add)
-
         }.run(::add)
         isVisible = true
     }

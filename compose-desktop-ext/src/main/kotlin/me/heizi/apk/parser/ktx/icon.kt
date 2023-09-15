@@ -72,25 +72,46 @@ fun Image(
     }
 }
 
+class ParseVectorIconException(message:String?=null,cause:Throwable?=null):Exception(message,cause)
 
-
-fun ApkIcon.Vector.toImageVector(density:Density) = data.let {
-    it.replace(Regex("""android:fillType="([^"]*)"""") ) {
-        println(it.groupValues.joinToString())
-        val value = runCatching {
-            it.groupValues[1].toInt()
-        }.getOrNull()
-        val fillType = when(value) {
-            0-> "evenOdd"
-            else-> "nonZero"
+fun ApkIcon.Vector.toImageVector(density:Density): ImageVector = data.replace(Regex("""android:([^=]*)="([^"]*)"""") ) { replacement ->
+    val attr = replacement.groupValues[1]
+    var value = replacement.groupValues[2]
+//    println()
+//    print(attr to value)
+    when {
+        attr.contains("Color") -> {
+            if (!value.startsWith("#")) {
+                value = value.toIntOrNull(16)?.let {
+                    "#$it"
+                } ?: "#FF000000"
+            }
         }
-        """android:fillType="$fillType""""
+        attr == "fillType" -> {
+            if (value !="evenOdd" && value !="nonZero") {
+                value = if (value == "0") "evenOdd" else "nonZero"
+            }
+        }
     }
+//    print(" - after - ")
+//    println(attr to value)
+    """android:$attr="$value""""
+
+
 }.toByteArray().let(::ByteArrayInputStream).use {
-    loadXmlImageVector(InputSource(it),density)
+    runCatching {
+        loadXmlImageVector(InputSource(it),density)
+    }.onFailure {
+        throw ParseVectorIconException(cause = it,message = it.message)
+    }.getOrThrow()
 }
 
 private val emptyBitmapPainter = BitmapPainter(ImageBitmap(0,0))
+
+//fun ApkIcon.Raster.toPainter(): Painter = toImage()!!.toPainter()
+//fun ApkIcon.Vector.composeVector(density: Density) = toImageVector(density)
+//fun ApkIcon.Color.toPainter() = ColorPainter(color)
+//fun ApkIcon.Adaptive.toPainter() = emptyBitmapPainter
 
 
 @Composable

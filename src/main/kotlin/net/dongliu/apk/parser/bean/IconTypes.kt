@@ -6,8 +6,7 @@ import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.Serializable
 import javax.imageio.ImageIO
-@Deprecated("Use IconTypes instead", ReplaceWith("IconTypes"), DeprecationLevel.ERROR)
-val ApkIcon:Nothing get() = TODO()
+
 typealias IconResource = IconTypes<out Any>
 
 

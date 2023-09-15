@@ -1,18 +1,15 @@
 @file:JvmName("run")
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.singleWindowApplication
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import me.heizi.apk.parser.ktx.Image
 import me.heizi.apk.parser.ktx.toImageVector
 import net.dongliu.apk.parser.ApkFile
-import net.dongliu.apk.parser.bean.ApkIcon
+import net.dongliu.apk.parser.bean.IconTypes
+import net.dongliu.apk.parser.bean.IconResource
 import kotlin.system.exitProcess
 
 var time = System.currentTimeMillis()
@@ -43,13 +40,13 @@ suspend fun main(args: Array<String>) {
         singleWindowApplication {
             Row {
 //                val icon = icons.filter { it.density>=0 }.minBy { it.density }
-                val icon = icons.find { it is ApkIcon.Adaptive }?:icons.first()
+                val icon = icons.find { it is IconTypes.Adaptive }?:icons.first()
                 println(icon::class.simpleName)
 
-                println(icon.data::class)
-                if (icon is ApkIcon.Adaptive) {
-                    if (icon.data.background is ApkIcon.Raster) {
-                        val background:ApkIcon.Raster = icon.data.background as ApkIcon.Raster
+                println(icon.data.javaClass)
+                if (icon is IconTypes.Adaptive) {
+                    if (icon.data.background is IconTypes.Raster) {
+                        val background:IconTypes.Raster = icon.data.background as IconTypes.Raster
                         println(background.data.size)
                         println(background.path)
                         exitProcess(0)
@@ -63,17 +60,17 @@ suspend fun main(args: Array<String>) {
                 icons.forEach {
                     println(it)
                     println(it.density)
-                    var image: ApkIcon<out Any>? = icon
+                    var image: IconResource? = icon
                     val density = LocalDensity.current
                     LaunchedEffect(it) {
                         println("inside l")
-                        if (image is ApkIcon.Adaptive ) {
-                            image = (image as ApkIcon.Adaptive).data.foreground
+                        if (image is IconTypes.Adaptive ) {
+                            image = (image as IconTypes.Adaptive).data.foreground
                         }
-                        if (image is ApkIcon.Vector) {
+                        if (image is IconTypes.Vector) {
                             println("inside")
                             image = image.runCatching {
-                                (this as ApkIcon.Vector).toImageVector(density)
+                                (this as IconTypes.Vector).toImageVector(density)
                                 image
                             }.onFailure {
                                 it.printStackTrace()

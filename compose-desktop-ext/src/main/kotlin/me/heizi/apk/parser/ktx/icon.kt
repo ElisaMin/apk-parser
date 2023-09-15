@@ -16,14 +16,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.loadXmlImageVector
 import androidx.compose.ui.unit.Density
-import net.dongliu.apk.parser.bean.ApkIcon
+import net.dongliu.apk.parser.bean.IconResource
+import net.dongliu.apk.parser.bean.IconTypes
 import net.dongliu.apk.parser.bean.toImage
 import org.xml.sax.InputSource
 import java.io.ByteArrayInputStream
 
 @Composable
 fun Image(
-    icon: ApkIcon.Adaptive,
+    icon: IconTypes.Adaptive,
     modifier: Modifier = Modifier,
     density: Density = LocalDensity.current,
     alignment: Alignment = Alignment.Center,
@@ -51,7 +52,7 @@ fun Image(
 @Suppress("NAME_SHADOWING")
 @Composable
 fun Image(
-    icon: ApkIcon<*>,
+    icon: IconResource,
     contentDescription: String? = icon::class.simpleName + " " + icon.path,
     modifier: Modifier = Modifier,
     density: Density = LocalDensity.current,
@@ -61,7 +62,7 @@ fun Image(
     colorFilter: ColorFilter? = null
 ) {
     val icon = remember { icon }
-    if (icon is ApkIcon.Adaptive) {
+    if (icon is IconTypes.Adaptive) {
         Image(icon,modifier,density,alignment,contentDescription,
             modifier,modifier,contentScale,contentScale,colorFilter,
             colorFilter,alpha,alpha,alignment,alignment
@@ -74,7 +75,7 @@ fun Image(
 
 class ParseVectorIconException(message:String?=null,cause:Throwable?=null):Exception(message,cause)
 
-fun ApkIcon.Vector.toImageVector(density:Density): ImageVector = data.replace(Regex("""android:([^=]*)="([^"]*)"""") ) { replacement ->
+fun IconTypes.Vector.toImageVector(density:Density): ImageVector = data.replace(Regex("""android:([^=]*)="([^"]*)"""") ) { replacement ->
     val attr = replacement.groupValues[1]
     var value = replacement.groupValues[2]
 //    println()
@@ -96,8 +97,6 @@ fun ApkIcon.Vector.toImageVector(density:Density): ImageVector = data.replace(Re
 //    print(" - after - ")
 //    println(attr to value)
     """android:$attr="$value""""
-
-
 }.toByteArray().let(::ByteArrayInputStream).use {
     runCatching {
         loadXmlImageVector(InputSource(it),density)
@@ -116,16 +115,16 @@ private val emptyBitmapPainter = BitmapPainter(ImageBitmap(0,0))
 
 @Composable
 fun rememberApkIconPainter(
-    icon: ApkIcon<*>?,
+    icon: IconResource?,
     density: Density = LocalDensity.current
 ):Painter = when(icon) {
-    is ApkIcon.Raster -> remember(icon.path,icon.data.toString()) { icon.toImage()!!.toPainter() }
-    is ApkIcon.Vector -> rememberVectorPainter(icon.toImageVector(density))
-    is ApkIcon.Color -> remember("ApkIconColorPainter",icon.data) {
+    is IconTypes.Raster -> remember(icon.path,icon.data.toString()) { icon.toImage()!!.toPainter() }
+    is IconTypes.Vector -> rememberVectorPainter(icon.toImageVector(density))
+    is IconTypes.Color -> remember("ApkIconColorPainter",icon.data) {
          ColorPainter(icon.color)
     }
-    is ApkIcon.Adaptive-> emptyBitmapPainter
+    is IconTypes.Adaptive-> emptyBitmapPainter
     else-> emptyBitmapPainter
 }
 
-val ApkIcon.Color.color get() = Color(value)
+val IconTypes.Color.color get() = Color(value)

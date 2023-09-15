@@ -14,6 +14,11 @@ allprojects {
     version = rootProject.extra["apk-parser.version"] as String
     apply( plugin = "maven-publish")
     apply( plugin = "org.jetbrains.kotlin.jvm")
+
+    //not working
+//    tasks.withType<KotlinCompile> {
+//        compilerOptions.languageVersion = KotlinVersion.KOTLIN_2_0
+//    }
     kotlin {
         jvmToolchain(19)
     }
@@ -22,12 +27,14 @@ allprojects {
             rootProject.file("local.properties").inputStream().use(::load)
         }["maven_repo_dir"] as String
         repositories {
+            mavenLocal()
             maven {
+                name = "Local2ForRemote"
                 url = uri(anotherLocal)
             }
         }
         publications {
-            create("toLocal", MavenPublication::class.java){
+            create("kotlin", MavenPublication::class.java){
                 components.forEach(::println)
                 from(components["kotlin"])
             }
